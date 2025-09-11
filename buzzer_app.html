@@ -6,8 +6,7 @@
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Import Supabase Client Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- We will remove the old Supabase script tag from here -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body {
@@ -85,6 +84,9 @@
 
     <!-- Supabase and App Logic -->
     <script type="module">
+        // NEW: Import the Supabase client directly inside the module.
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
         // --- Supabase Configuration ---
         // IMPORTANT: Replace these with your actual Supabase project URL and Anon Key.
         // You can find these in your Supabase project settings under "API".
@@ -98,30 +100,13 @@
             // We will now directly try to connect to Supabase.
             // If the URL or Key are wrong, the 'catch' block below will handle the error.
             try {
-                // Initialize Supabase Client
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                // Initialize Supabase Client - UPDATED to use the imported createClient function
+                supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
                 if (!supabase) {
                     throw new Error("Supabase client could not be initialized. Check your URL and Key.");
                 }
 
                 // Determine view based on URL parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('view') === 'host') {
-                    setupHostView();
-                } else {
-                    setupClientView();
-                }
-            } catch (error) {
-                console.error("Initialization Error:", error);
-                // If an error occurs, show the configuration/error screen
-                document.getElementById('config-view').classList.remove('hidden');
-                const errorParagraph = document.querySelector('#config-view p');
-                errorParagraph.innerHTML = `<strong>Connection Failed:</strong> ${error.message}<br><br>Please double-check that your Supabase URL and Key are correct in the HTML file. Also, ensure you have run the initial SQL setup in your Supabase project.`;
-            }
-        };
-
-        // --- Host View Setup ---
-        async function setupHostView() {
 // ... existing code ... -->
 
