@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Buzzer App (Supabase Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Import Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .leaderboard-item { animation: slideIn 0.3s ease-out forwards; }
+        #qrcode-container {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .config-needed {
+            border: 2px dashed #f59e0b;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen overflow-hidden">
+
+    <!-- Configuration Missing View -->
+    <div id="config-view" class="hidden text-center max-w-lg p-4">
+         <div class="config-needed">
+            <h1 class="text-3xl font-bold text-amber-400 mb-4">Configuration Needed</h1>
+            <p class="text-gray-300">This app requires Supabase credentials to function. Please open this HTML file in a text editor, find the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables in the script section, and replace the placeholder values with your project's credentials.</p>
+            <a href="https://supabase.com/dashboard" target="_blank" class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go to Supabase Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Host View: Displays QR Code and Leaderboard -->
+    <div id="host-view" class="hidden w-full h-full p-4 md:p-8 flex flex-col items-center justify-center text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan to Buzz!</h1>
+        <p class="text-lg md:text-xl text-gray-300 mb-6">Use your phone camera to scan the code below.</p>
+        <div id="qrcode-container" class="mb-8">
+            <div id="qrcode"></div>
+        </div>
+        
+        <div class="w-full max-w-2xl">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Leaderboard</h2>
+            <ol id="leaderboard" class="space-y-3 text-left"></ol>
+        </div>
+
+        <button id="reset-button" class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+            Reset Buzzers
+        </button>
+    </div>
+
+    <!-- Client View: Registration and Buzzer Button -->
+    <div id="client-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
+        <!-- Registration Screen -->
+        <div id="register-screen" class="w-full max-w-sm text-center">
+            <h1 class="text-4xl font-bold mb-6">Enter Your Name</h1>
+            <input type="text" id="name-input" placeholder="Your Name" class="w-full px-4 py-3 bg-gray-800 border-2 border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:border-yellow-400 transition mb-4" autocomplete="name">
+            <button id="register-button" class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
+                Join Game
+            </button>
+        </div>
+
+        <!-- Buzzer Screen -->
+        <div id="buzzer-screen" class="hidden w-full h-full flex flex-col items-center justify-center text-center">
+             <div id="user-info" class="absolute top-4 text-lg text-gray-400"></div>
+             <p id="buzzer-status" class="text-2xl font-medium mb-8">&nbsp;</p>
+             <button id="buzzer-button" class="w-64 h-64 md:w-80 md:h-80 bg-red-600 rounded-full shadow-2xl flex items-center justify-center text-white font-black text-6xl transition-transform transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5); border: 10px solid #a01010;">
+                BUZZ!
+            </button>
+        </div>
+    </div>
+
+    <!-- Supabase and App Logic -->
+    <script type="module">
+        // --- Supabase Configuration ---
+        // IMPORTANT: Replace these with your actual Supabase project URL and Anon Key.
+        // You can find these in your Supabase project settings under "API".
+        const SUPABASE_URL = https://kwbwnuwemdlefpefhjdt.supabase.co; // e.g., 'https://xyz.supabase.co'
+        const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc;
+
+        let supabase;
+
+        // --- Main Application Logic ---
+        window.onload = () => {
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+                document.getElementById('config-view').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // Initialize Supabase Client
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+                // Determine view based on URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('view') === 'host') {
+                    setupHostView();
+                } else {
+                    setupClientView();
+                }
+            } catch (error) {
+                console.error("Initialization Error:", error);
+                document.body.innerHTML = `<div class="text-red-500 text-2xl p-4">Error initializing the application: ${error.message}</div>`;
+            }
+        };
+
+        // --- Host View Setup ---
+        async function setupHostView() {
+            document.getElementById('host-view').classList.remove('hidden');
+
+            // Generate QR Code for client view
+            const clientUrl = window.location.href.split('?')[0];
+            const qrcodeContainer = document.getElementById('qrcode');
+            qrcodeContainer.innerHTML = '';
+            new QRCode(qrcodeContainer, {
+                text: clientUrl,
+                width: 256,
+                height: 256,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // Set up reset button
+            document.getElementById('reset-button').addEventListener('click', resetBuzzes);
+
+            // Function to fetch and render the leaderboard
+            const renderLeaderboard = async () => {
+                const { data, error } = await supabase
+                    .from('buzzes')
+                    .select('name, created_at')
+                    .order('created_at', { ascending: true })
+                    .limit(10);
+                
+                if (error) {
+                    console.error("Error fetching leaderboard:", error);
+                    return;
+                }
+
+                const leaderboard = document.getElementById('leaderboard');
+                leaderboard.innerHTML = ''; // Clear board before redraw
+                data.forEach((buzz, index) => {
+                    const li = document.createElement('li');
+                    
+                    let medal = '';
+                    let bgColor = 'bg-gray-800';
+                    let textColor = 'text-white';
+                    if (index === 0) { medal = '🥇'; bgColor = 'bg-yellow-400'; textColor = 'text-yellow-900'; } 
+                    else if (index === 1) { medal = '🥈'; bgColor = 'bg-gray-400'; textColor = 'text-gray-900'; } 
+                    else if (index === 2) { medal = '🥉'; bgColor = 'bg-amber-600'; textColor = 'text-amber-100'; }
+                    
+                    li.className = `leaderboard-item p-4 rounded-lg flex items-center justify-between shadow-md ${bgColor} ${textColor}`;
+                    li.innerHTML = `
+                        <span class="font-bold text-2xl">${index + 1}. ${medal} ${buzz.name}</span>
+                        <span class="text-sm font-mono">${new Date(buzz.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 })}</span>
+                    `;
+                    leaderboard.appendChild(li);
+                });
+            };
+
+            // Listen for new buzzes in real-time
+            supabase.channel('buzzes')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzzes' }, payload => {
+                    console.log('New buzz received!', payload);
+                    renderLeaderboard(); // Re-render the whole list to ensure order
+                })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'buzzes' }, payload => {
+                    console.log('Buzzes reset!', payload);
+                    renderLeaderboard(); // Re-render the whole list to ensure order
+                })
+                .subscribe();
+
+            // Initial render
+            renderLeaderboard();
+        }
+        
+        // --- Client View Setup ---
+        async function setupClientView() {
+            document.getElementById('client-view').classList.remove('hidden');
+            const registerScreen = document.getElementById('register-screen');
+            const buzzerScreen = document.getElementById('buzzer-screen');
+            const registerButton = document.getElementById('register-button');
+            const nameInput = document.getElementById('name-input');
+            const buzzerButton = document.getElementById('buzzer-button');
+            const buzzerStatus = document.getElementById('buzzer-status');
+            const userInfoDisp = document.getElementById('user-info');
+
+            let userName = '';
+            
+            // Get user session (Supabase handles anonymous auth automatically)
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) {
+                console.error("Error getting session:", error);
+                return;
+            }
+            const userId = session.user.id;
+
+
+            // Handle registration
+            registerButton.addEventListener('click', () => {
+                userName = nameInput.value.trim();
+                if (userName) {
+                    registerScreen.classList.add('hidden');
+                    buzzerScreen.classList.remove('hidden');
+                    userInfoDisp.textContent = `Playing as: ${userName}`;
+                    checkIfAlreadyBuzzed();
+                } else {
+                    alert('Please enter a name.');
+                }
+            });
+
+            // Handle buzzer press
+            buzzerButton.addEventListener('click', async () => {
+                if (!userName || buzzerButton.disabled) return;
+                
+                buzzerButton.disabled = true;
+                buzzerButton.classList.add('animate-pulse');
+                buzzerStatus.textContent = "BUZZED!";
+
+                try {
+                    // Add new buzz
+                    const { error } = await supabase
+                        .from('buzzes')
+                        .insert({ name: userName, user_id: userId });
+                    
+                    if (error) throw error;
+
+                } catch (error) {
+                    console.error("Error buzzing in:", error);
+                    // Check if error is due to unique constraint (already buzzed)
+                    if (error.message.includes('duplicate key value violates unique constraint')) {
+                         buzzerStatus.textContent = "You already buzzed in!";
+                    } else {
+                        buzzerStatus.textContent = "Error! Try again.";
+                        buzzerButton.disabled = false;
+                        buzzerButton.classList.remove('animate-pulse');
+                    }
+                }
+            });
+
+            // Check if the user has already buzzed in on load/change
+            async function checkIfAlreadyBuzzed() {
+                const { data, error } = await supabase
+                    .from('buzzes')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .limit(1);
+
+                if (error) {
+                    console.error("Error checking buzz status:", error);
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    buzzerButton.disabled = true;
+                    buzzerStatus.textContent = "You have buzzed in!";
+                    buzzerButton.classList.remove('animate-pulse');
+                } else {
+                    buzzerButton.disabled = false;
+                    buzzerStatus.innerHTML = "&nbsp;"; // Reset status
+                    buzzerButton.classList.remove('animate-pulse');
+                }
+            }
+        }
+        
+        // --- Utility Functions ---
+        async function resetBuzzes() {
+            if (!confirm("Are you sure you want to reset all buzzes? This action cannot be undone.")) {
+                return;
+            }
+            console.log("Resetting buzzes...");
+            try {
+                const { error } = await supabase
+                    .from('buzzes')
+                    .delete()
+                    .neq('id', -1); // Condition to delete all rows
+
+                if (error) throw error;
+
+                console.log("All buzzes have been reset.");
+                document.getElementById('leaderboard').innerHTML = '';
+            } catch (error) {
+                console.error("Error resetting buzzes: ", error);
+                alert("Failed to reset buzzes. Check the console for errors.");
+            }
+        }
+    </script>
+</body>
+</html>
+
