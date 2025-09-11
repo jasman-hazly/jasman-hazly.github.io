@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- DEFINITIVE FIX: Scripts are now loaded directly in the head to ensure they are available before the body loads. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -93,8 +92,6 @@
     </div>
 
     <script>
-        // DEFINITIVE FIX: Removed all load listeners and timeouts. The script now runs directly after the body is parsed
-        // and after the blocking scripts in the <head> have loaded, ensuring all dependencies are ready.
         const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
         
@@ -368,8 +365,6 @@
             }
         };
 
-        // DEFINITIVE FIX: Wait for the entire window, including all external scripts, to be fully loaded before starting the app.
-        // This is the most robust way to prevent race conditions on live servers.
         window.addEventListener('load', () => {
             App.init();
         });
