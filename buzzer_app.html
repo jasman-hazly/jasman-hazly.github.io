@@ -95,14 +95,15 @@
 
         // --- Main Application Logic ---
         window.onload = () => {
-            if (SUPABASE_URL === 'https://kwbwnuwemdlefpefhjdt.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc') {
-                document.getElementById('config-view').classList.remove('hidden');
-                return;
-            }
-
+            // We will now directly try to connect to Supabase.
+            // If the URL or Key are wrong, the 'catch' block below will handle the error.
             try {
                 // Initialize Supabase Client
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+                if (!supabase) {
+                    throw new Error("Supabase client could not be initialized. Check your URL and Key.");
+                }
 
                 // Determine view based on URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
@@ -113,192 +114,14 @@
                 }
             } catch (error) {
                 console.error("Initialization Error:", error);
-                document.body.innerHTML = `<div class="text-red-500 text-2xl p-4">Error initializing the application: ${error.message}</div>`;
+                // If an error occurs, show the configuration/error screen
+                document.getElementById('config-view').classList.remove('hidden');
+                const errorParagraph = document.querySelector('#config-view p');
+                errorParagraph.innerHTML = `<strong>Connection Failed:</strong> ${error.message}<br><br>Please double-check that your Supabase URL and Key are correct in the HTML file. Also, ensure you have run the initial SQL setup in your Supabase project.`;
             }
         };
 
         // --- Host View Setup ---
         async function setupHostView() {
-            document.getElementById('host-view').classList.remove('hidden');
-
-            // Generate QR Code for client view
-            const clientUrl = window.location.href.split('?')[0];
-            const qrcodeContainer = document.getElementById('qrcode');
-            qrcodeContainer.innerHTML = '';
-            new QRCode(qrcodeContainer, {
-                text: clientUrl,
-                width: 256,
-                height: 256,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-
-            // Set up reset button
-            document.getElementById('reset-button').addEventListener('click', resetBuzzes);
-
-            // Function to fetch and render the leaderboard
-            const renderLeaderboard = async () => {
-                const { data, error } = await supabase
-                    .from('buzzes')
-                    .select('name, created_at')
-                    .order('created_at', { ascending: true })
-                    .limit(10);
-                
-                if (error) {
-                    console.error("Error fetching leaderboard:", error);
-                    return;
-                }
-
-                const leaderboard = document.getElementById('leaderboard');
-                leaderboard.innerHTML = ''; // Clear board before redraw
-                data.forEach((buzz, index) => {
-                    const li = document.createElement('li');
-                    
-                    let medal = '';
-                    let bgColor = 'bg-gray-800';
-                    let textColor = 'text-white';
-                    if (index === 0) { medal = '🥇'; bgColor = 'bg-yellow-400'; textColor = 'text-yellow-900'; } 
-                    else if (index === 1) { medal = '🥈'; bgColor = 'bg-gray-400'; textColor = 'text-gray-900'; } 
-                    else if (index === 2) { medal = '🥉'; bgColor = 'bg-amber-600'; textColor = 'text-amber-100'; }
-                    
-                    li.className = `leaderboard-item p-4 rounded-lg flex items-center justify-between shadow-md ${bgColor} ${textColor}`;
-                    li.innerHTML = `
-                        <span class="font-bold text-2xl">${index + 1}. ${medal} ${buzz.name}</span>
-                        <span class="text-sm font-mono">${new Date(buzz.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 })}</span>
-                    `;
-                    leaderboard.appendChild(li);
-                });
-            };
-
-            // Listen for new buzzes in real-time
-            supabase.channel('buzzes')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzzes' }, payload => {
-                    console.log('New buzz received!', payload);
-                    renderLeaderboard(); // Re-render the whole list to ensure order
-                })
-                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'buzzes' }, payload => {
-                    console.log('Buzzes reset!', payload);
-                    renderLeaderboard(); // Re-render the whole list to ensure order
-                })
-                .subscribe();
-
-            // Initial render
-            renderLeaderboard();
-        }
-        
-        // --- Client View Setup ---
-        async function setupClientView() {
-            document.getElementById('client-view').classList.remove('hidden');
-            const registerScreen = document.getElementById('register-screen');
-            const buzzerScreen = document.getElementById('buzzer-screen');
-            const registerButton = document.getElementById('register-button');
-            const nameInput = document.getElementById('name-input');
-            const buzzerButton = document.getElementById('buzzer-button');
-            const buzzerStatus = document.getElementById('buzzer-status');
-            const userInfoDisp = document.getElementById('user-info');
-
-            let userName = '';
-            
-            // Get user session (Supabase handles anonymous auth automatically)
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) {
-                console.error("Error getting session:", error);
-                return;
-            }
-            const userId = session.user.id;
-
-
-            // Handle registration
-            registerButton.addEventListener('click', () => {
-                userName = nameInput.value.trim();
-                if (userName) {
-                    registerScreen.classList.add('hidden');
-                    buzzerScreen.classList.remove('hidden');
-                    userInfoDisp.textContent = `Playing as: ${userName}`;
-                    checkIfAlreadyBuzzed();
-                } else {
-                    alert('Please enter a name.');
-                }
-            });
-
-            // Handle buzzer press
-            buzzerButton.addEventListener('click', async () => {
-                if (!userName || buzzerButton.disabled) return;
-                
-                buzzerButton.disabled = true;
-                buzzerButton.classList.add('animate-pulse');
-                buzzerStatus.textContent = "BUZZED!";
-
-                try {
-                    // Add new buzz
-                    const { error } = await supabase
-                        .from('buzzes')
-                        .insert({ name: userName, user_id: userId });
-                    
-                    if (error) throw error;
-
-                } catch (error) {
-                    console.error("Error buzzing in:", error);
-                    // Check if error is due to unique constraint (already buzzed)
-                    if (error.message.includes('duplicate key value violates unique constraint')) {
-                         buzzerStatus.textContent = "You already buzzed in!";
-                    } else {
-                        buzzerStatus.textContent = "Error! Try again.";
-                        buzzerButton.disabled = false;
-                        buzzerButton.classList.remove('animate-pulse');
-                    }
-                }
-            });
-
-            // Check if the user has already buzzed in on load/change
-            async function checkIfAlreadyBuzzed() {
-                const { data, error } = await supabase
-                    .from('buzzes')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .limit(1);
-
-                if (error) {
-                    console.error("Error checking buzz status:", error);
-                    return;
-                }
-                
-                if (data && data.length > 0) {
-                    buzzerButton.disabled = true;
-                    buzzerStatus.textContent = "You have buzzed in!";
-                    buzzerButton.classList.remove('animate-pulse');
-                } else {
-                    buzzerButton.disabled = false;
-                    buzzerStatus.innerHTML = "&nbsp;"; // Reset status
-                    buzzerButton.classList.remove('animate-pulse');
-                }
-            }
-        }
-        
-        // --- Utility Functions ---
-        async function resetBuzzes() {
-            if (!confirm("Are you sure you want to reset all buzzes? This action cannot be undone.")) {
-                return;
-            }
-            console.log("Resetting buzzes...");
-            try {
-                const { error } = await supabase
-                    .from('buzzes')
-                    .delete()
-                    .neq('id', -1); // Condition to delete all rows
-
-                if (error) throw error;
-
-                console.log("All buzzes have been reset.");
-                document.getElementById('leaderboard').innerHTML = '';
-            } catch (error) {
-                console.error("Error resetting buzzes: ", error);
-                alert("Failed to reset buzzes. Check the console for errors.");
-            }
-        }
-    </script>
-</body>
-</html>
-
+// ... existing code ... -->
 
