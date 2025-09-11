@@ -93,7 +93,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const SUPABASE_URL = 'hhttps://vpvssqytxxzmldazphcp.supabase.co';
+            // DEFINITIVE FIX: The typo 'hhttps' has been corrected to 'https'.
+            const SUPABASE_URL = 'https://vpvssqytxxzmldazphcp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwdnNzcXl0eHh6bWxkYXpwaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1ODQ4NzQsImV4cCI6MjA3MzE2MDg3NH0.wzUjd3Zyi1iz49b33FrdCVZln9MWEI0WnTBw919_0M8';
             
             const App = {
@@ -361,16 +362,14 @@
                 }
             };
             
-            // This listener waits for the document itself to be ready.
-            document.addEventListener('DOMContentLoaded', () => {
-                // This interval then actively polls to ensure the external libraries are also ready.
-                const libraryCheck = setInterval(() => {
-                    if (window.supabase && window.QRCode) {
-                        clearInterval(libraryCheck); // Stop polling
-                        App.init(); // Start the app
-                    }
-                }, 100); // Check every 100 milliseconds
-            });
+            // This robust listener waits for the document to be ready, then polls for the libraries.
+            const libraryCheck = setInterval(() => {
+                if (window.supabase && window.QRCode) {
+                    clearInterval(libraryCheck); // Stop polling
+                    App.init(); // Start the app
+                }
+            }, 100); // Check every 100 milliseconds
+        });
     </script>
 </body>
 </html>
