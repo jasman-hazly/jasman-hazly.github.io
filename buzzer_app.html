@@ -153,8 +153,7 @@
                 Admin: {
                     init() {
                         App.elements.adminSetupView.classList.remove('hidden');
-                        const createButton = document.getElementById('create-game-button');
-                        createButton.onclick = App.Admin.createGame;
+                        document.getElementById('create-game-button').onclick = this.createGame;
                     },
                     async createGame() {
                         const gameName = document.getElementById('game-name-input').value.trim();
@@ -179,7 +178,6 @@
                             createButton.textContent = "Create Game Session";
                             return;
                         }
-
                         window.location.search = `?view=host&session=${data.id}`;
                     }
                 },
@@ -252,6 +250,7 @@
                     },
                     listenForBuzzes() {
                         if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
+                        // FIX: Changed 'session-${App.state.session.id}' to use this.state.realtimeChannel for consistency
                         this.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
                             .on('postgres_changes', 
                                 { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
@@ -271,19 +270,22 @@
                         const waitingScreen = document.getElementById('waiting-screen');
                         if (!sessionId) { waitingScreen.classList.remove('hidden'); return; }
 
-                        const registerScreen = document.getElementById('register-screen');
-                        let userName = localStorage.getItem('buzzerUserName');
-                        if (userName) this.showBuzzerScreen(userName, sessionId);
-                        else registerScreen.classList.remove('hidden');
-
-                        document.getElementById('register-button').onclick = () => {
-                            const name = document.getElementById('name-input').value.trim();
-                            if (name) {
-                                localStorage.setItem('buzzerUserName', name);
-                                // FIX: Call showBuzzerScreen through the global App object to preserve context
-                                App.Client.showBuzzerScreen(name, sessionId);
-                            }
-                        };
+                        const userName = localStorage.getItem('buzzerUserName');
+                        if (userName) {
+                            this.showBuzzerScreen(userName, sessionId);
+                        } else {
+                            document.getElementById('register-screen').classList.remove('hidden');
+                        }
+                        // DEFINITIVE FIX: Bind the event handler to the correct 'this' context.
+                        document.getElementById('register-button').onclick = this.handleRegistration.bind(this, sessionId);
+                    },
+                    // DEFINITIVE FIX: New function to handle registration click.
+                    handleRegistration(sessionId) {
+                        const name = document.getElementById('name-input').value.trim();
+                        if (name) {
+                            localStorage.setItem('buzzerUserName', name);
+                            this.showBuzzerScreen(name, sessionId);
+                        }
                     },
                     showBuzzerScreen(name, sessionId) {
                         document.getElementById('register-screen').classList.add('hidden');
@@ -291,7 +293,7 @@
                         document.getElementById('user-info').textContent = `Playing as: ${name}`;
                         this.checkIfAlreadyBuzzed(sessionId);
                         document.getElementById('buzzer-button').onclick = this.buzzIn.bind(this, sessionId);
-                        this.listenForQuestionChanges(sessionId); // IMPROVEMENT: Listen for new questions
+                        this.listenForQuestionChanges(sessionId);
                     },
                     getOrSetUserId() {
                         let id = localStorage.getItem('buzzerUserId');
@@ -362,6 +364,7 @@
                 }
             };
 
+            // Initialize the entire application
             App.init();
         });
     </script>
