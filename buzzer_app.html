@@ -92,8 +92,7 @@
         </div>
     </div>
 
-    <!-- DEFINITIVE FIX: The main script is now at the end of the body. -->
-    <!-- This guarantees all HTML elements exist and all <head> scripts have loaded before this script runs. -->
+    <!-- This script now runs only after the entire body and all head scripts are loaded. -->
     <script>
         const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
@@ -367,11 +366,8 @@
             }
         };
 
-        // DEFINITIVE FIX: Wait for the entire HTML document to be fully parsed and ready before initializing the app.
-        // This is the most robust way to prevent race conditions on live servers.
-        document.addEventListener('DOMContentLoaded', () => {
-            App.init();
-        });
+        // By placing the script at the end of the body, we ensure the DOM is ready when it runs.
+        App.init();
     </script>
 </body>
 </html>
