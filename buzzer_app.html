@@ -153,7 +153,6 @@
                 Admin: {
                     init() {
                         App.elements.adminSetupView.classList.remove('hidden');
-                        // DEFINITIVE FIX: Assign event handler directly to avoid context issues.
                         document.getElementById('create-game-button').onclick = App.Admin.createGame;
                     },
                     async createGame() {
@@ -272,11 +271,10 @@
                             waitingScreen.classList.remove('hidden'); 
                             return; 
                         }
-
+                        
                         // DEFINITIVE FIX: Always show the registration screen for a new session.
                         document.getElementById('register-screen').classList.remove('hidden');
 
-                        // For convenience, pre-fill the name if it's already in storage.
                         const nameInput = document.getElementById('name-input');
                         const storedName = localStorage.getItem('buzzerUserName');
                         if (storedName) {
@@ -373,3 +371,4 @@
     </script>
 </body>
 </html>
+
