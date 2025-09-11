@@ -260,13 +260,22 @@
                 }
                 
                 buzzerButton.onclick = async () => {
+                    // FIX: Re-fetch the userId and userName right before buzzing to ensure they are valid.
+                    const userId = getOrSetUserId();
+                    const currentUserName = localStorage.getItem('buzzerUserName');
+
+                    if (!currentUserName) {
+                        buzzerStatus.textContent = "Error: Name not found. Please re-register.";
+                        return;
+                    }
+
                     buzzerButton.disabled = true;
                     buzzerStatus.textContent = "Buzzing in...";
                     
                     try {
                         const { error } = await supabase
                             .from('buzzes')
-                            .insert({ name: userName, user_id: userId, round_id: roundId });
+                            .insert({ name: currentUserName, user_id: userId, round_id: roundId });
 
                         if (error) {
                             if (error.code === '23505') { // Unique violation
@@ -297,5 +306,3 @@
     </script>
 </body>
 </html>
-
-
