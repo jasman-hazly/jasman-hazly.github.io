@@ -188,14 +188,17 @@
 
                 // Reset functionality
                 resetButton.onclick = async () => {
-                    // Use a custom modal/confirm dialog if needed in a real app
-                    if (window.confirm('Are you sure you want to reset all buzzes?')) {
-                        const { error } = await supabase.from('buzzes').delete().gt('id', 0); // Deletes all rows
-                        if (error) {
-                            console.error('Error resetting buzzes:', error);
-                        } else {
-                            leaderboard.innerHTML = '';
-                        }
+                    // Clear the UI immediately for a faster user experience and to ensure it always appears cleared.
+                    leaderboard.innerHTML = '';
+
+                    // Send the delete request to the database in the background.
+                    const { error } = await supabase.from('buzzes').delete().gt('id', 0); // Deletes all rows
+                    
+                    if (error) {
+                        // If the delete fails, log the error and refetch the data.
+                        // The leaderboard will repopulate, showing the user that the reset failed.
+                        console.error('Error resetting buzzes:', error);
+                        fetchLeaderboard();
                     }
                 };
                 
@@ -290,4 +293,5 @@
     </script>
 </body>
 </html>
+
 
