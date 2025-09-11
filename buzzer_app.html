@@ -112,15 +112,11 @@
 
             async init() {
                 try {
-                    if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
-                       throw new Error("Required libraries (Supabase, QRCode) failed to load.");
-                    }
-                    
+                    // This check will now happen after libraries are confirmed to be loaded.
                     const options = {
                         global: { headers: { 'x-application-name': 'buzzer-app' } },
                         realtime: { params: { eventsPerSecond: 10 } },
                     };
-
                     this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
                     if (!this.state.supabase) throw new Error("Supabase client could not be initialized.");
                     
