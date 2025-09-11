@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ROBUST LOADING FIX 1: Load all libraries as classic, deferred scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -24,6 +23,7 @@
             padding: 1rem;
             border-radius: 0.75rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out;
         }
         .config-needed {
             border: 2px dashed #f59e0b;
@@ -46,8 +46,8 @@
 
     <!-- Host View: Displays QR Code and Leaderboard -->
     <div id="host-view" class="hidden w-full h-full p-4 md:p-8 flex flex-col items-center justify-center text-center">
-        <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan to Buzz!</h1>
-        <p class="text-lg md:text-xl text-gray-300 mb-6">Use your phone camera to scan the code below.</p>
+        <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan for this Round!</h1>
+        <p class="text-lg md:text-xl text-gray-300 mb-6">A new QR code is generated for each question.</p>
         <div id="qrcode-container" class="mb-8">
             <div id="qrcode"></div>
         </div>
@@ -58,18 +58,24 @@
         </div>
 
         <button id="reset-button" class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
-            Reset Buzzers
+            Reset for Next Question
         </button>
     </div>
 
     <!-- Client View: Registration and Buzzer Button -->
     <div id="client-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
+        <!-- Waiting Screen (No Round ID) -->
+        <div id="waiting-screen" class="hidden text-center">
+            <h1 class="text-4xl font-bold mb-6">Waiting for Host</h1>
+            <p class="text-lg text-gray-400">Please scan the QR code on the main screen to join a round.</p>
+        </div>
+
         <!-- Registration Screen -->
-        <div id="register-screen" class="w-full max-w-sm text-center">
+        <div id="register-screen" class="hidden w-full max-w-sm text-center">
             <h1 class="text-4xl font-bold mb-6">Enter Your Name</h1>
             <input type="text" id="name-input" placeholder="Your Name" class="w-full px-4 py-3 bg-gray-800 border-2 border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:border-yellow-400 transition mb-4" autocomplete="name">
             <button id="register-button" class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
-                Join Game
+                Join Round
             </button>
         </div>
 
@@ -83,37 +89,23 @@
         </div>
     </div>
 
-    <!-- Supabase and App Logic -->
-    <!-- ROBUST LOADING FIX 2: Reverted to a classic script, no "type=module" -->
     <script>
-        // ROBUST LOADING FIX 3: Wait for the entire window to be loaded before running any code.
         window.addEventListener('load', () => {
-
-            // --- Supabase Configuration ---
             const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
-
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInRypecCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
             let supabase;
 
-            // --- Main Application Entry Point ---
             function initializeApp() {
                 try {
-                    // Check if libraries loaded correctly
                     if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
                        throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                     }
-                    
-                    // Call createClient directly from the global supabase object
                     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
                     if (!supabase) {
-                        throw new Error("Supabase client could not be initialized. Check your URL and Key.");
+                        throw new Error("Supabase client could not be initialized.");
                     }
-                    
-                    // Determine view and start the correct part of the app
                     const urlParams = new URLSearchParams(window.location.search);
                     const view = urlParams.get('view');
-            
                     if (view === 'host') {
                         document.getElementById('host-view').classList.remove('hidden');
                         startHostView();
@@ -121,7 +113,6 @@
                         document.getElementById('client-view').classList.remove('hidden');
                         startClientView();
                     }
-
                 } catch (error) {
                     console.error("Initialization failed:", error);
                     const configView = document.getElementById('config-view');
@@ -133,80 +124,81 @@
                 }
             }
 
-
-            // --- Host View Logic ---
             function startHostView() {
                 const leaderboard = document.getElementById('leaderboard');
                 const resetButton = document.getElementById('reset-button');
-                
-                // Generate QR Code
                 const qrCodeElement = document.getElementById('qrcode');
-                const clientUrl = window.location.href.split('?')[0];
-                new QRCode(qrCodeElement, {
-                    text: clientUrl,
-                    width: 256,
-                    height: 256,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
+                const qrCodeContainer = document.getElementById('qrcode-container');
+                let currentRoundId;
+                let qrCodeInstance = null;
 
-                // Listen for buzzes
+                function generateNewRound() {
+                    currentRoundId = crypto.randomUUID();
+                    const clientUrl = `${window.location.href.split('?')[0]}?round=${currentRoundId}`;
+                    
+                    qrCodeContainer.style.transform = 'scale(0)';
+                    setTimeout(() => {
+                        if (qrCodeInstance) {
+                            qrCodeInstance.clear();
+                            qrCodeInstance.makeCode(clientUrl);
+                        } else {
+                            qrCodeInstance = new QRCode(qrCodeElement, {
+                                text: clientUrl, width: 256, height: 256,
+                                colorDark : "#000000", colorLight : "#ffffff",
+                                correctLevel : QRCode.CorrectLevel.H
+                            });
+                        }
+                        qrCodeContainer.style.transform = 'scale(1)';
+                    }, 300);
+                    
+                    fetchLeaderboard();
+                }
+
                 const listenForBuzzes = () => {
                     supabase.channel('buzzes')
-                        .on('postgres_changes', { event: '*', schema: 'public', table: 'buzzes' }, fetchLeaderboard)
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `round_id=eq.${currentRoundId}` }, fetchLeaderboard)
                         .subscribe();
-                    fetchLeaderboard(); // Fetch initial state
                 };
                 
                 const fetchLeaderboard = async () => {
+                    if (!currentRoundId) return;
                     const { data, error } = await supabase
                         .from('buzzes')
                         .select('name')
+                        .eq('round_id', currentRoundId)
                         .order('created_at', { ascending: true })
                         .limit(10);
                         
                     if (error) {
-                        console.error('Error fetching leaderboard:', error);
-                        return;
+                        console.error('Error fetching leaderboard:', error); return;
                     }
                     
-                    leaderboard.innerHTML = ''; // Clear current list
+                    leaderboard.innerHTML = '';
                     data.forEach((buzz, index) => {
                         const li = document.createElement('li');
                         li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
-                        
-                        let medal = '';
-                        if (index === 0) medal = '🥇';
-                        else if (index === 1) medal = '🥈';
-                        else if (index === 2) medal = '🥉';
-
-                        li.innerHTML = `<span class="text-3xl w-12 text-center">${medal || `<strong>${index + 1}</strong>`}</span> <span>${buzz.name}</span>`;
+                        let medal = (index === 0) ? '🥇' : (index === 1) ? '🥈' : (index === 2) ? '🥉' : `<strong>${index + 1}</strong>`;
+                        li.innerHTML = `<span class="text-3xl w-12 text-center">${medal}</span> <span>${buzz.name}</span>`;
                         leaderboard.appendChild(li);
                     });
                 };
 
-                // Reset functionality
                 resetButton.onclick = async () => {
-                    // Clear the UI immediately for a faster user experience and to ensure it always appears cleared.
                     leaderboard.innerHTML = '';
-
-                    // Send the delete request to the database in the background.
-                    const { error } = await supabase.from('buzzes').delete().gt('id', 0); // Deletes all rows
-                    
-                    if (error) {
-                        // If the delete fails, log the error and refetch the data.
-                        // The leaderboard will repopulate, showing the user that the reset failed.
-                        console.error('Error resetting buzzes:', error);
-                        fetchLeaderboard();
-                    }
+                    // We don't need to delete from DB if each round is unique. 
+                    // But it's good practice to clean up old rounds if desired. This is optional.
+                    generateNewRound();
                 };
                 
+                generateNewRound(); // Start the first round on load
                 listenForBuzzes();
             }
 
-            // --- Client View Logic ---
             function startClientView() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const roundId = urlParams.get('round');
+
+                const waitingScreen = document.getElementById('waiting-screen');
                 const registerScreen = document.getElementById('register-screen');
                 const buzzerScreen = document.getElementById('buzzer-screen');
                 const nameInput = document.getElementById('name-input');
@@ -214,12 +206,19 @@
                 const buzzerButton = document.getElementById('buzzer-button');
                 const buzzerStatus = document.getElementById('buzzer-status');
                 const userInfo = document.getElementById('user-info');
+                
+                if (!roundId) {
+                    waitingScreen.classList.remove('hidden');
+                    return;
+                }
 
                 let userName = localStorage.getItem('buzzerUserName');
                 const userId = getOrSetUserId();
 
                 if (userName) {
                     showBuzzerScreen(userName);
+                } else {
+                    registerScreen.classList.remove('hidden');
                 }
 
                 registerButton.onclick = () => {
@@ -243,11 +242,12 @@
                         .from('buzzes')
                         .select('id')
                         .eq('user_id', userId)
+                        .eq('round_id', roundId)
                         .single();
 
                     if (data) {
                         buzzerButton.disabled = true;
-                        buzzerStatus.textContent = "You've buzzed in!";
+                        buzzerStatus.textContent = "You've buzzed in for this round!";
                     }
                 }
                 
@@ -258,22 +258,19 @@
                     try {
                         const { error } = await supabase
                             .from('buzzes')
-                            .insert({ name: userName, user_id: userId });
+                            .insert({ name: userName, user_id: userId, round_id: roundId });
 
                         if (error) {
-                            // This likely means the user has already buzzed (due to the unique constraint)
                             if (error.code === '23505') { // Unique violation
                                  buzzerStatus.textContent = "You've already buzzed!";
-                            } else {
-                                throw error;
-                            }
+                            } else { throw error; }
                         } else {
                             buzzerStatus.textContent = "You're on the board!";
                         }
                     } catch (e) {
                         console.error('Error buzzing in:', e);
                         buzzerStatus.textContent = 'Error! Try again.';
-                        buzzerButton.disabled = false; // Allow retry on other errors
+                        buzzerButton.disabled = false;
                     }
                 };
 
@@ -287,11 +284,9 @@
                 }
             }
             
-            // Start the application
             initializeApp();
         });
     </script>
 </body>
 </html>
-
 
