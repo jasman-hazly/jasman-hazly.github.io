@@ -268,15 +268,21 @@
                     state: { realtimeChannel: null },
                     init(sessionId) {
                         const waitingScreen = document.getElementById('waiting-screen');
-                        if (!sessionId) { waitingScreen.classList.remove('hidden'); return; }
-
-                        const userName = localStorage.getItem('buzzerUserName');
-                        if (userName) {
-                            this.showBuzzerScreen(userName, sessionId);
-                        } else {
-                            document.getElementById('register-screen').classList.remove('hidden');
+                        if (!sessionId) { 
+                            waitingScreen.classList.remove('hidden'); 
+                            return; 
                         }
-                        // DEFINITIVE FIX: Assign the click handler directly.
+
+                        // DEFINITIVE FIX: Always show the registration screen for a new session.
+                        document.getElementById('register-screen').classList.remove('hidden');
+
+                        // For convenience, pre-fill the name if it's already in storage.
+                        const nameInput = document.getElementById('name-input');
+                        const storedName = localStorage.getItem('buzzerUserName');
+                        if (storedName) {
+                            nameInput.value = storedName;
+                        }
+                        
                         document.getElementById('register-button').onclick = () => App.Client.handleRegistration(sessionId);
                     },
                     handleRegistration(sessionId) {
@@ -367,4 +373,3 @@
     </script>
 </body>
 </html>
-
