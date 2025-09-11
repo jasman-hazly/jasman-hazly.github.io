@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DEFINITIVE FIX: Scripts are now loaded directly in the head to ensure they are available before the body loads. -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -92,284 +93,283 @@
     </div>
 
     <script>
-        window.addEventListener('load', () => {
-            // DEFINITIVE FIX: Use setTimeout to ensure all deferred scripts are loaded and ready.
-            setTimeout(() => {
-                const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
-                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
-                
-                const App = {
-                    state: {
-                        supabase: null,
-                        session: null,
-                        currentQuestion: 1,
-                        qrCodeInstance: null,
-                    },
-                    
-                    elements: {
-                        configView: document.getElementById('config-view'),
-                        adminSetupView: document.getElementById('admin-setup-view'),
-                        hostView: document.getElementById('host-view'),
-                        clientView: document.getElementById('client-view'),
-                    },
+        // DEFINITIVE FIX: Removed all load listeners and timeouts. The script now runs directly after the body is parsed
+        // and after the blocking scripts in the <head> have loaded, ensuring all dependencies are ready.
+        const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
+        
+        const App = {
+            state: {
+                supabase: null,
+                session: null,
+                currentQuestion: 1,
+                qrCodeInstance: null,
+            },
+            
+            elements: {
+                configView: document.getElementById('config-view'),
+                adminSetupView: document.getElementById('admin-setup-view'),
+                hostView: document.getElementById('host-view'),
+                clientView: document.getElementById('client-view'),
+            },
 
-                    async init() {
-                        try {
-                            if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
-                               throw new Error("Required libraries (Supabase, QRCode) failed to load.");
-                            }
-                            
-                            const options = {
-                                global: { headers: { 'x-application-name': 'buzzer-app' } },
-                                realtime: { params: { eventsPerSecond: 10 } },
-                            };
-
-                            this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
-                            if (!this.state.supabase) throw new Error("Supabase client could not be initialized.");
-                            
-                            this.router();
-                        } catch (error) {
-                            this.showError(error.message);
-                        }
-                    },
-
-                    showError(message) {
-                        console.error("Initialization failed:", message);
-                        Object.values(this.elements).forEach(el => el.classList.add('hidden'));
-                        this.elements.configView.classList.remove('hidden');
-                        const errorParagraph = this.elements.configView.querySelector('p');
-                        errorParagraph.innerHTML = `<strong>Error:</strong> Could not start the app. <br><br> <span class="text-sm text-gray-400">Details: ${message}</span>`;
-                    },
-
-                    router() {
-                        const params = new URLSearchParams(window.location.search);
-                        const view = params.get('view');
-                        const sessionId = params.get('session');
-                        
-                        if (view === 'admin') this.Admin.init();
-                        else if (view === 'host' && sessionId) this.Host.init(sessionId);
-                        else if (sessionId) this.Client.init(sessionId);
-                        else this.Client.init(null);
-                    },
-
-                    Admin: {
-                        init() {
-                            App.elements.adminSetupView.classList.remove('hidden');
-                            document.getElementById('create-game-button').onclick = App.Admin.createGame;
-                        },
-                        async createGame() {
-                            const gameName = document.getElementById('game-name-input').value.trim();
-                            const totalQuestions = parseInt(document.getElementById('questions-input').value, 10);
-                            if (!gameName || !totalQuestions || totalQuestions <= 0) {
-                                alert("Please enter a valid game name and number of questions."); return;
-                            }
-                            
-                            const createButton = document.getElementById('create-game-button');
-                            createButton.disabled = true;
-                            createButton.textContent = "Creating...";
-
-                            const { data, error } = await App.state.supabase
-                                .from('sessions')
-                                .insert({ game_name: gameName, total_questions: totalQuestions })
-                                .select()
-                                .single();
-                            
-                            if (error) {
-                                alert(`Error creating game session:\n\n${error.message}\n\nPlease ensure you have run the latest SQL script in your Supabase project.`);
-                                createButton.disabled = false;
-                                createButton.textContent = "Create Game Session";
-                                return;
-                            }
-                            window.location.search = `?view=host&session=${data.id}`;
-                        }
-                    },
-
-                    Host: {
-                        state: { realtimeChannel: null },
-                        async init(sessionId) {
-                            App.elements.hostView.classList.remove('hidden');
-                            const { data, error } = await App.state.supabase.from('sessions').select().eq('id', sessionId).single();
-                            if (error || !data) { App.showError("Game session not found."); return; }
-                            
-                            App.state.session = data;
-                            App.state.currentQuestion = data.current_question;
-                            this.render();
-                            this.listenForBuzzes();
-
-                            document.getElementById('reset-button').onclick = this.nextQuestion.bind(this);
-                        },
-                        render() {
-                            const { session, currentQuestion } = App.state;
-                            document.getElementById('game-title-display').textContent = session.game_name;
-                            document.getElementById('question-counter-display').textContent = `Question ${currentQuestion} / ${session.total_questions}`;
-                            
-                            if (!App.state.qrCodeInstance) this.generateQRCode();
-                            
-                            this.fetchLeaderboard();
-                        },
-                        generateQRCode() {
-                            const clientUrl = `${window.location.origin}${window.location.pathname}?session=${App.state.session.id}`;
-                            App.state.qrCodeInstance = new QRCode(document.getElementById('qrcode'), {
-                                text: clientUrl, width: 256, height: 256,
-                                colorDark : "#000000", colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.H
-                            });
-                        },
-                        async nextQuestion() {
-                            if (App.state.currentQuestion >= App.state.session.total_questions) {
-                                alert("This is the final question!"); return;
-                            }
-                            App.state.currentQuestion++;
-                            const { error } = await App.state.supabase
-                                .from('sessions')
-                                .update({ current_question: App.state.currentQuestion })
-                                .eq('id', App.state.session.id);
-                            if (error) { console.error("Failed to update question", error); App.state.currentQuestion--; return; }
-                            
-                            this.render();
-                        },
-                        async fetchLeaderboard() {
-                            const { session, currentQuestion } = App.state;
-                            const { data, error } = await App.state.supabase
-                                .from('buzzes')
-                                .select('name')
-                                .eq('session_id', session.id)
-                                .eq('question_number', currentQuestion)
-                                .order('created_at', { ascending: true })
-                                .limit(10);
-                            
-                            if (error) { console.error('Error fetching leaderboard:', error); return; }
-                            
-                            const leaderboard = document.getElementById('leaderboard');
-                            leaderboard.innerHTML = '';
-                            data.forEach((buzz, index) => {
-                                const li = document.createElement('li');
-                                li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
-                                let medal = (index === 0) ? '🥇' : (index === 1) ? '🥈' : (index === 2) ? '🥉' : `<strong>${index + 1}</strong>`;
-                                li.innerHTML = `<span class="text-3xl w-12 text-center">${medal}</span> <span>${buzz.name}</span>`;
-                                leaderboard.appendChild(li);
-                            });
-                        },
-                        listenForBuzzes() {
-                            if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
-                            this.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
-                                .on('postgres_changes', 
-                                    { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
-                                    (payload) => {
-                                        if (payload.new.question_number === App.state.currentQuestion) {
-                                            this.fetchLeaderboard();
-                                        }
-                                    }
-                                )
-                                .subscribe();
-                        }
-                    },
-
-                    Client: {
-                        state: { realtimeChannel: null },
-                        init(sessionId) {
-                            const waitingScreen = document.getElementById('waiting-screen');
-                            if (!sessionId) { 
-                                waitingScreen.classList.remove('hidden'); 
-                                return; 
-                            }
-                            
-                            document.getElementById('register-screen').classList.remove('hidden');
-
-                            const nameInput = document.getElementById('name-input');
-                            const storedName = localStorage.getItem('buzzerUserName');
-                            if (storedName) {
-                                nameInput.value = storedName;
-                            }
-                            
-                            document.getElementById('register-button').onclick = () => App.Client.handleRegistration(sessionId);
-                        },
-                        handleRegistration(sessionId) {
-                            const name = document.getElementById('name-input').value.trim();
-                            if (name) {
-                                localStorage.setItem('buzzerUserName', name);
-                                this.showBuzzerScreen(name, sessionId);
-                            }
-                        },
-                        showBuzzerScreen(name, sessionId) {
-                            document.getElementById('register-screen').classList.add('hidden');
-                            document.getElementById('buzzer-screen').classList.remove('hidden');
-                            document.getElementById('user-info').textContent = `Playing as: ${name}`;
-                            this.checkIfAlreadyBuzzed(sessionId);
-                            document.getElementById('buzzer-button').onclick = this.buzzIn.bind(this, sessionId);
-                            this.listenForQuestionChanges(sessionId);
-                        },
-                        getOrSetUserId() {
-                            let id = localStorage.getItem('buzzerUserId');
-                            if (!id) { id = crypto.randomUUID(); localStorage.setItem('buzzerUserId', id); }
-                            return id;
-                        },
-                        listenForQuestionChanges(sessionId) {
-                            if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
-                            this.state.realtimeChannel = App.state.supabase.channel(`client-session-${sessionId}`)
-                                .on('postgres_changes',
-                                    { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
-                                    (payload) => {
-                                        const buzzerButton = document.getElementById('buzzer-button');
-                                        const buzzerStatus = document.getElementById('buzzer-status');
-                                        buzzerButton.disabled = false;
-                                        buzzerStatus.innerHTML = '&nbsp;';
-                                        this.checkIfAlreadyBuzzed(sessionId);
-                                    }
-                                )
-                                .subscribe();
-                        },
-                        async checkIfAlreadyBuzzed(sessionId) {
-                            const { data: sessionData } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
-                            if (!sessionData) return;
-                            
-                            const { data: buzzData } = await App.state.supabase
-                                .from('buzzes')
-                                .select('id')
-                                .eq('user_id', this.getOrSetUserId())
-                                .eq('session_id', sessionId)
-                                .eq('question_number', sessionData.current_question)
-                                .single();
-                            
-                            if (buzzData) {
-                                document.getElementById('buzzer-button').disabled = true;
-                                document.getElementById('buzzer-status').textContent = "You've buzzed for this question!";
-                            }
-                        },
-                        async buzzIn(sessionId) {
-                            const buzzerButton = document.getElementById('buzzer-button');
-                            const buzzerStatus = document.getElementById('buzzer-status');
-                            buzzerButton.disabled = true;
-                            buzzerStatus.textContent = "Buzzing in...";
-
-                            try {
-                                const { data: sessionData, error: sessionError } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
-                                if (sessionError || !sessionData) throw new Error("Could not find active game session.");
-
-                                const userId = this.getOrSetUserId();
-                                const currentUserName = localStorage.getItem('buzzerUserName');
-
-                                const { error: insertError } = await App.state.supabase
-                                    .from('buzzes')
-                                    .insert({ name: currentUserName, user_id: userId, session_id: sessionId, question_number: sessionData.current_question });
-
-                                if (insertError) {
-                                    if (insertError.code === '23505') buzzerStatus.textContent = "You've already buzzed!";
-                                    else throw insertError;
-                                } else {
-                                    buzzerStatus.textContent = "You're on the board!";
-                                }
-                            } catch (e) {
-                                console.error('Error buzzing in:', e);
-                                buzzerStatus.textContent = 'Error! Try again.';
-                                buzzerButton.disabled = false;
-                            }
-                        }
+            async init() {
+                try {
+                    if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
+                       throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                     }
-                };
-                App.init();
-            }, 0);
-        });
+                    
+                    const options = {
+                        global: { headers: { 'x-application-name': 'buzzer-app' } },
+                        realtime: { params: { eventsPerSecond: 10 } },
+                    };
+
+                    this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
+                    if (!this.state.supabase) throw new Error("Supabase client could not be initialized.");
+                    
+                    this.router();
+                } catch (error) {
+                    this.showError(error.message);
+                }
+            },
+
+            showError(message) {
+                console.error("Initialization failed:", message);
+                Object.values(this.elements).forEach(el => el.classList.add('hidden'));
+                this.elements.configView.classList.remove('hidden');
+                const errorParagraph = this.elements.configView.querySelector('p');
+                errorParagraph.innerHTML = `<strong>Error:</strong> Could not start the app. <br><br> <span class="text-sm text-gray-400">Details: ${message}</span>`;
+            },
+
+            router() {
+                const params = new URLSearchParams(window.location.search);
+                const view = params.get('view');
+                const sessionId = params.get('session');
+                
+                if (view === 'admin') this.Admin.init();
+                else if (view === 'host' && sessionId) this.Host.init(sessionId);
+                else if (sessionId) this.Client.init(sessionId);
+                else this.Client.init(null);
+            },
+
+            Admin: {
+                init() {
+                    App.elements.adminSetupView.classList.remove('hidden');
+                    document.getElementById('create-game-button').onclick = App.Admin.createGame;
+                },
+                async createGame() {
+                    const gameName = document.getElementById('game-name-input').value.trim();
+                    const totalQuestions = parseInt(document.getElementById('questions-input').value, 10);
+                    if (!gameName || !totalQuestions || totalQuestions <= 0) {
+                        alert("Please enter a valid game name and number of questions."); return;
+                    }
+                    
+                    const createButton = document.getElementById('create-game-button');
+                    createButton.disabled = true;
+                    createButton.textContent = "Creating...";
+
+                    const { data, error } = await App.state.supabase
+                        .from('sessions')
+                        .insert({ game_name: gameName, total_questions: totalQuestions })
+                        .select()
+                        .single();
+                    
+                    if (error) {
+                        alert(`Error creating game session:\n\n${error.message}\n\nPlease ensure you have run the latest SQL script in your Supabase project.`);
+                        createButton.disabled = false;
+                        createButton.textContent = "Create Game Session";
+                        return;
+                    }
+                    window.location.search = `?view=host&session=${data.id}`;
+                }
+            },
+
+            Host: {
+                state: { realtimeChannel: null },
+                async init(sessionId) {
+                    App.elements.hostView.classList.remove('hidden');
+                    const { data, error } = await App.state.supabase.from('sessions').select().eq('id', sessionId).single();
+                    if (error || !data) { App.showError("Game session not found."); return; }
+                    
+                    App.state.session = data;
+                    App.state.currentQuestion = data.current_question;
+                    this.render();
+                    this.listenForBuzzes();
+
+                    document.getElementById('reset-button').onclick = this.nextQuestion.bind(this);
+                },
+                render() {
+                    const { session, currentQuestion } = App.state;
+                    document.getElementById('game-title-display').textContent = session.game_name;
+                    document.getElementById('question-counter-display').textContent = `Question ${currentQuestion} / ${session.total_questions}`;
+                    
+                    if (!App.state.qrCodeInstance) this.generateQRCode();
+                    
+                    this.fetchLeaderboard();
+                },
+                generateQRCode() {
+                    const clientUrl = `${window.location.origin}${window.location.pathname}?session=${App.state.session.id}`;
+                    App.state.qrCodeInstance = new QRCode(document.getElementById('qrcode'), {
+                        text: clientUrl, width: 256, height: 256,
+                        colorDark : "#000000", colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                },
+                async nextQuestion() {
+                    if (App.state.currentQuestion >= App.state.session.total_questions) {
+                        alert("This is the final question!"); return;
+                    }
+                    App.state.currentQuestion++;
+                    const { error } = await App.state.supabase
+                        .from('sessions')
+                        .update({ current_question: App.state.currentQuestion })
+                        .eq('id', App.state.session.id);
+                    if (error) { console.error("Failed to update question", error); App.state.currentQuestion--; return; }
+                    
+                    this.render();
+                },
+                async fetchLeaderboard() {
+                    const { session, currentQuestion } = App.state;
+                    const { data, error } = await App.state.supabase
+                        .from('buzzes')
+                        .select('name')
+                        .eq('session_id', session.id)
+                        .eq('question_number', currentQuestion)
+                        .order('created_at', { ascending: true })
+                        .limit(10);
+                    
+                    if (error) { console.error('Error fetching leaderboard:', error); return; }
+                    
+                    const leaderboard = document.getElementById('leaderboard');
+                    leaderboard.innerHTML = '';
+                    data.forEach((buzz, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
+                        let medal = (index === 0) ? '🥇' : (index === 1) ? '🥈' : (index === 2) ? '🥉' : `<strong>${index + 1}</strong>`;
+                        li.innerHTML = `<span class="text-3xl w-12 text-center">${medal}</span> <span>${buzz.name}</span>`;
+                        leaderboard.appendChild(li);
+                    });
+                },
+                listenForBuzzes() {
+                    if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
+                    this.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
+                        .on('postgres_changes', 
+                            { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
+                            (payload) => {
+                                if (payload.new.question_number === App.state.currentQuestion) {
+                                    this.fetchLeaderboard();
+                                }
+                            }
+                        )
+                        .subscribe();
+                }
+            },
+
+            Client: {
+                state: { realtimeChannel: null },
+                init(sessionId) {
+                    const waitingScreen = document.getElementById('waiting-screen');
+                    if (!sessionId) { 
+                        waitingScreen.classList.remove('hidden'); 
+                        return; 
+                    }
+                    
+                    document.getElementById('register-screen').classList.remove('hidden');
+
+                    const nameInput = document.getElementById('name-input');
+                    const storedName = localStorage.getItem('buzzerUserName');
+                    if (storedName) {
+                        nameInput.value = storedName;
+                    }
+                    
+                    document.getElementById('register-button').onclick = () => App.Client.handleRegistration(sessionId);
+                },
+                handleRegistration(sessionId) {
+                    const name = document.getElementById('name-input').value.trim();
+                    if (name) {
+                        localStorage.setItem('buzzerUserName', name);
+                        this.showBuzzerScreen(name, sessionId);
+                    }
+                },
+                showBuzzerScreen(name, sessionId) {
+                    document.getElementById('register-screen').classList.add('hidden');
+                    document.getElementById('buzzer-screen').classList.remove('hidden');
+                    document.getElementById('user-info').textContent = `Playing as: ${name}`;
+                    this.checkIfAlreadyBuzzed(sessionId);
+                    document.getElementById('buzzer-button').onclick = this.buzzIn.bind(this, sessionId);
+                    this.listenForQuestionChanges(sessionId);
+                },
+                getOrSetUserId() {
+                    let id = localStorage.getItem('buzzerUserId');
+                    if (!id) { id = crypto.randomUUID(); localStorage.setItem('buzzerUserId', id); }
+                    return id;
+                },
+                listenForQuestionChanges(sessionId) {
+                    if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
+                    this.state.realtimeChannel = App.state.supabase.channel(`client-session-${sessionId}`)
+                        .on('postgres_changes',
+                            { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
+                            (payload) => {
+                                const buzzerButton = document.getElementById('buzzer-button');
+                                const buzzerStatus = document.getElementById('buzzer-status');
+                                buzzerButton.disabled = false;
+                                buzzerStatus.innerHTML = '&nbsp;';
+                                this.checkIfAlreadyBuzzed(sessionId);
+                            }
+                        )
+                        .subscribe();
+                },
+                async checkIfAlreadyBuzzed(sessionId) {
+                    const { data: sessionData } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
+                    if (!sessionData) return;
+                    
+                    const { data: buzzData } = await App.state.supabase
+                        .from('buzzes')
+                        .select('id')
+                        .eq('user_id', this.getOrSetUserId())
+                        .eq('session_id', sessionId)
+                        .eq('question_number', sessionData.current_question)
+                        .single();
+                    
+                    if (buzzData) {
+                        document.getElementById('buzzer-button').disabled = true;
+                        document.getElementById('buzzer-status').textContent = "You've buzzed for this question!";
+                    }
+                },
+                async buzzIn(sessionId) {
+                    const buzzerButton = document.getElementById('buzzer-button');
+                    const buzzerStatus = document.getElementById('buzzer-status');
+                    buzzerButton.disabled = true;
+                    buzzerStatus.textContent = "Buzzing in...";
+
+                    try {
+                        const { data: sessionData, error: sessionError } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
+                        if (sessionError || !sessionData) throw new Error("Could not find active game session.");
+
+                        const userId = this.getOrSetUserId();
+                        const currentUserName = localStorage.getItem('buzzerUserName');
+
+                        const { error: insertError } = await App.state.supabase
+                            .from('buzzes')
+                            .insert({ name: currentUserName, user_id: userId, session_id: sessionId, question_number: sessionData.current_question });
+
+                        if (insertError) {
+                            if (insertError.code === '23505') buzzerStatus.textContent = "You've already buzzed!";
+                            else throw insertError;
+                        } else {
+                            buzzerStatus.textContent = "You're on the board!";
+                        }
+                    } catch (e) {
+                        console.error('Error buzzing in:', e);
+                        buzzerStatus.textContent = 'Error! Try again.';
+                        buzzerButton.disabled = false;
+                    }
+                }
+            }
+        };
+
+        App.init();
     </script>
 </body>
 </html>
+
