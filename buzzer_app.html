@@ -88,14 +88,14 @@
         // --- Supabase Configuration ---
         // IMPORTANT: Replace these with your actual Supabase project URL and Anon Key.
         // You can find these in your Supabase project settings under "API".
-        const SUPABASE_URL = https://kwbwnuwemdlefpefhjdt.supabase.co; // e.g., 'https://xyz.supabase.co'
-        const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc;
+        const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co'; // e.g., 'https://xyz.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
 
         let supabase;
 
         // --- Main Application Logic ---
         window.onload = () => {
-            if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+            if (SUPABASE_URL === 'https://kwbwnuwemdlefpefhjdt.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc') {
                 document.getElementById('config-view').classList.remove('hidden');
                 return;
             }
@@ -300,4 +300,5 @@
     </script>
 </body>
 </html>
+
 
