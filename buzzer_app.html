@@ -260,10 +260,17 @@
                 }
                 
                 buzzerButton.onclick = async () => {
-                    // FIX: Re-fetch the userId and userName right before buzzing to ensure they are valid.
+                    // DEFINITIVE FIX: Re-acquire roundId and user details inside the click handler
+                    // This makes the function self-contained and avoids closure/scoping issues on live servers.
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const roundId = urlParams.get('round');
                     const userId = getOrSetUserId();
                     const currentUserName = localStorage.getItem('buzzerUserName');
 
+                    if (!roundId) {
+                        buzzerStatus.textContent = "Error: Round ID missing. Please re-scan QR code.";
+                        return;
+                    }
                     if (!currentUserName) {
                         buzzerStatus.textContent = "Error: Name not found. Please re-register.";
                         return;
