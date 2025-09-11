@@ -153,7 +153,8 @@
                 Admin: {
                     init() {
                         App.elements.adminSetupView.classList.remove('hidden');
-                        document.getElementById('create-game-button').onclick = this.createGame;
+                        // DEFINITIVE FIX: Assign event handler directly to avoid context issues.
+                        document.getElementById('create-game-button').onclick = App.Admin.createGame;
                     },
                     async createGame() {
                         const gameName = document.getElementById('game-name-input').value.trim();
@@ -250,7 +251,6 @@
                     },
                     listenForBuzzes() {
                         if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
-                        // FIX: Changed 'session-${App.state.session.id}' to use this.state.realtimeChannel for consistency
                         this.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
                             .on('postgres_changes', 
                                 { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
@@ -276,10 +276,9 @@
                         } else {
                             document.getElementById('register-screen').classList.remove('hidden');
                         }
-                        // DEFINITIVE FIX: Bind the event handler to the correct 'this' context.
-                        document.getElementById('register-button').onclick = this.handleRegistration.bind(this, sessionId);
+                        // DEFINITIVE FIX: Assign the click handler directly.
+                        document.getElementById('register-button').onclick = () => App.Client.handleRegistration(sessionId);
                     },
-                    // DEFINITIVE FIX: New function to handle registration click.
                     handleRegistration(sessionId) {
                         const name = document.getElementById('name-input').value.trim();
                         if (name) {
@@ -363,8 +362,6 @@
                     }
                 }
             };
-
-            // Initialize the entire application
             App.init();
         });
     </script>
