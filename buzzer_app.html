@@ -102,7 +102,6 @@
                     session: null,
                     currentQuestion: 1,
                     qrCodeInstance: null,
-                    realtimeChannel: null,
                 },
                 
                 elements: {
@@ -118,16 +117,9 @@
                            throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                         }
                         
-                        // DEFINITIVE FIX: Added real-time configuration to the client options.
                         const options = {
-                            global: {
-                                headers: { 'x-application-name': 'buzzer-app' },
-                            },
-                            realtime: {
-                                params: {
-                                    eventsPerSecond: 10,
-                                },
-                            },
+                            global: { headers: { 'x-application-name': 'buzzer-app' } },
+                            realtime: { params: { eventsPerSecond: 10 } },
                         };
 
                         this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
@@ -155,7 +147,7 @@
                     if (view === 'admin') this.Admin.init();
                     else if (view === 'host' && sessionId) this.Host.init(sessionId);
                     else if (sessionId) this.Client.init(sessionId);
-                    else this.Client.init(null); // No session, show waiting
+                    else this.Client.init(null);
                 },
 
                 Admin: {
@@ -193,6 +185,7 @@
                 },
 
                 Host: {
+                    state: { realtimeChannel: null },
                     async init(sessionId) {
                         App.elements.hostView.classList.remove('hidden');
                         const { data, error } = await App.state.supabase.from('sessions').select().eq('id', sessionId).single();
@@ -258,8 +251,8 @@
                         });
                     },
                     listenForBuzzes() {
-                        if (App.state.realtimeChannel) App.state.supabase.removeChannel(App.state.realtimeChannel);
-                        App.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
+                        if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
+                        this.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
                             .on('postgres_changes', 
                                 { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
                                 (payload) => {
@@ -273,6 +266,7 @@
                 },
 
                 Client: {
+                    state: { realtimeChannel: null },
                     init(sessionId) {
                         const waitingScreen = document.getElementById('waiting-screen');
                         if (!sessionId) { waitingScreen.classList.remove('hidden'); return; }
@@ -286,7 +280,8 @@
                             const name = document.getElementById('name-input').value.trim();
                             if (name) {
                                 localStorage.setItem('buzzerUserName', name);
-                                this.showBuzzerScreen(name, sessionId);
+                                // FIX: Call showBuzzerScreen through the global App object to preserve context
+                                App.Client.showBuzzerScreen(name, sessionId);
                             }
                         };
                     },
@@ -296,11 +291,27 @@
                         document.getElementById('user-info').textContent = `Playing as: ${name}`;
                         this.checkIfAlreadyBuzzed(sessionId);
                         document.getElementById('buzzer-button').onclick = this.buzzIn.bind(this, sessionId);
+                        this.listenForQuestionChanges(sessionId); // IMPROVEMENT: Listen for new questions
                     },
                     getOrSetUserId() {
                         let id = localStorage.getItem('buzzerUserId');
                         if (!id) { id = crypto.randomUUID(); localStorage.setItem('buzzerUserId', id); }
                         return id;
+                    },
+                    listenForQuestionChanges(sessionId) {
+                        if (this.state.realtimeChannel) App.state.supabase.removeChannel(this.state.realtimeChannel);
+                        this.state.realtimeChannel = App.state.supabase.channel(`client-session-${sessionId}`)
+                            .on('postgres_changes',
+                                { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
+                                (payload) => {
+                                    const buzzerButton = document.getElementById('buzzer-button');
+                                    const buzzerStatus = document.getElementById('buzzer-status');
+                                    buzzerButton.disabled = false;
+                                    buzzerStatus.innerHTML = '&nbsp;';
+                                    this.checkIfAlreadyBuzzed(sessionId);
+                                }
+                            )
+                            .subscribe();
                     },
                     async checkIfAlreadyBuzzed(sessionId) {
                         const { data: sessionData } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
@@ -356,3 +367,4 @@
     </script>
 </body>
 </html>
+
