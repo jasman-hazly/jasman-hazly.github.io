@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- REMOVED: The old Supabase script tag is no longer needed. -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+    <!-- ROBUST LOADING FIX 1: Load all libraries as classic, deferred scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -84,198 +84,209 @@
     </div>
 
     <!-- Supabase and App Logic -->
-    <script type="module">
-        // DEFINITIVE FIX 1: Import the Supabase client directly inside the module.
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    <!-- ROBUST LOADING FIX 2: Reverted to a classic script, no "type=module" -->
+    <script>
+        // ROBUST LOADING FIX 3: Wait for the entire window to be loaded before running any code.
+        window.addEventListener('load', () => {
 
-        // --- Supabase Configuration ---
-        const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
+            // --- Supabase Configuration ---
+            const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
 
-        let supabase;
+            let supabase;
 
-        // --- Main Application Entry Point ---
-        // The script now waits for the import to finish automatically.
-        // We can run the initialization code directly.
-        
-        try {
-            // DEFINITIVE FIX 2: Use the imported `createClient` function directly.
-            supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            if (!supabase) {
-                throw new Error("Supabase client could not be initialized. Check your URL and Key.");
-            }
-            
-            // Determine view and start the correct part of the app
-            const urlParams = new URLSearchParams(window.location.search);
-            const view = urlParams.get('view');
-    
-            if (view === 'host') {
-                document.getElementById('host-view').classList.remove('hidden');
-                startHostView();
-            } else {
-                document.getElementById('client-view').classList.remove('hidden');
-                startClientView();
-            }
-
-        } catch (error) {
-            console.error("Initialization failed:", error);
-            const configView = document.getElementById('config-view');
-            configView.classList.remove('hidden');
-            const errorParagraph = document.querySelector('#config-view p');
-            errorParagraph.innerHTML = `<strong>Error:</strong> Could not connect to Supabase. Please double-check your SUPABASE_URL and SUPABASE_ANON_KEY. <br><br> <span class="text-sm text-gray-400">Details: ${error.message}</span>`;
-        }
-
-
-        // --- Host View Logic ---
-        function startHostView() {
-            const leaderboard = document.getElementById('leaderboard');
-            const resetButton = document.getElementById('reset-button');
-            
-            // Generate QR Code
-            const qrCodeElement = document.getElementById('qrcode');
-            const clientUrl = window.location.href.split('?')[0];
-            new QRCode(qrCodeElement, {
-                text: clientUrl,
-                width: 256,
-                height: 256,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-
-            // Listen for buzzes
-            const listenForBuzzes = () => {
-                supabase.channel('buzzes')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'buzzes' }, fetchLeaderboard)
-                    .subscribe();
-                fetchLeaderboard(); // Fetch initial state
-            };
-            
-            const fetchLeaderboard = async () => {
-                const { data, error } = await supabase
-                    .from('buzzes')
-                    .select('name')
-                    .order('created_at', { ascending: true })
-                    .limit(10);
-                    
-                if (error) {
-                    console.error('Error fetching leaderboard:', error);
-                    return;
-                }
-                
-                leaderboard.innerHTML = ''; // Clear current list
-                data.forEach((buzz, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
-                    
-                    let medal = '';
-                    if (index === 0) medal = '🥇';
-                    else if (index === 1) medal = '🥈';
-                    else if (index === 2) medal = '🥉';
-
-                    li.innerHTML = `<span class="text-3xl w-12 text-center">${medal || `<strong>${index + 1}</strong>`}</span> <span>${buzz.name}</span>`;
-                    leaderboard.appendChild(li);
-                });
-            };
-
-            // Reset functionality
-            resetButton.onclick = async () => {
-                if (confirm('Are you sure you want to reset all buzzes?')) {
-                    const { error } = await supabase.from('buzzes').delete().gt('id', 0); // Deletes all rows
-                    if (error) {
-                        console.error('Error resetting buzzes:', error);
-                    } else {
-                        leaderboard.innerHTML = '';
-                    }
-                }
-            };
-            
-            listenForBuzzes();
-        }
-
-        // --- Client View Logic ---
-        function startClientView() {
-            const registerScreen = document.getElementById('register-screen');
-            const buzzerScreen = document.getElementById('buzzer-screen');
-            const nameInput = document.getElementById('name-input');
-            const registerButton = document.getElementById('register-button');
-            const buzzerButton = document.getElementById('buzzer-button');
-            const buzzerStatus = document.getElementById('buzzer-status');
-            const userInfo = document.getElementById('user-info');
-
-            let userName = localStorage.getItem('buzzerUserName');
-            const userId = getOrSetUserId();
-
-            if (userName) {
-                showBuzzerScreen(userName);
-            }
-
-            registerButton.onclick = () => {
-                const name = nameInput.value.trim();
-                if (name) {
-                    localStorage.setItem('buzzerUserName', name);
-                    showBuzzerScreen(name);
-                }
-            };
-
-            function showBuzzerScreen(name) {
-                userName = name;
-                registerScreen.classList.add('hidden');
-                buzzerScreen.classList.remove('hidden');
-                userInfo.textContent = `Playing as: ${name}`;
-                checkIfAlreadyBuzzed();
-            }
-
-            async function checkIfAlreadyBuzzed() {
-                const { data, error } = await supabase
-                    .from('buzzes')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .single();
-
-                if (data) {
-                    buzzerButton.disabled = true;
-                    buzzerStatus.textContent = "You've buzzed in!";
-                }
-            }
-            
-            buzzerButton.onclick = async () => {
-                buzzerButton.disabled = true;
-                buzzerStatus.textContent = "Buzzing in...";
-                
+            // --- Main Application Entry Point ---
+            function initializeApp() {
                 try {
-                    const { error } = await supabase
-                        .from('buzzes')
-                        .insert({ name: userName, user_id: userId });
-
-                    if (error) {
-                        // This likely means the user has already buzzed (due to the unique constraint)
-                        if (error.code === '23505') { // Unique violation
-                             buzzerStatus.textContent = "You've already buzzed!";
-                        } else {
-                            throw error;
-                        }
-                    } else {
-                        buzzerStatus.textContent = "You're on the board!";
+                    // Check if libraries loaded correctly
+                    if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
+                       throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                     }
-                } catch (e) {
-                    console.error('Error buzzing in:', e);
-                    buzzerStatus.textContent = 'Error! Try again.';
-                    buzzerButton.disabled = false; // Allow retry on other errors
-                }
-            };
+                    
+                    // Call createClient directly from the global supabase object
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            function getOrSetUserId() {
-                let id = localStorage.getItem('buzzerUserId');
-                if (!id) {
-                    id = crypto.randomUUID();
-                    localStorage.setItem('buzzerUserId', id);
+                    if (!supabase) {
+                        throw new Error("Supabase client could not be initialized. Check your URL and Key.");
+                    }
+                    
+                    // Determine view and start the correct part of the app
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const view = urlParams.get('view');
+            
+                    if (view === 'host') {
+                        document.getElementById('host-view').classList.remove('hidden');
+                        startHostView();
+                    } else {
+                        document.getElementById('client-view').classList.remove('hidden');
+                        startClientView();
+                    }
+
+                } catch (error) {
+                    console.error("Initialization failed:", error);
+                    const configView = document.getElementById('config-view');
+                    document.getElementById('host-view').classList.add('hidden');
+                    document.getElementById('client-view').classList.add('hidden');
+                    configView.classList.remove('hidden');
+                    const errorParagraph = document.querySelector('#config-view p');
+                    errorParagraph.innerHTML = `<strong>Error:</strong> Could not start the app. <br><br> <span class="text-sm text-gray-400">Details: ${error.message}</span>`;
                 }
-                return id;
             }
-        }
 
+
+            // --- Host View Logic ---
+            function startHostView() {
+                const leaderboard = document.getElementById('leaderboard');
+                const resetButton = document.getElementById('reset-button');
+                
+                // Generate QR Code
+                const qrCodeElement = document.getElementById('qrcode');
+                const clientUrl = window.location.href.split('?')[0];
+                new QRCode(qrCodeElement, {
+                    text: clientUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+
+                // Listen for buzzes
+                const listenForBuzzes = () => {
+                    supabase.channel('buzzes')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'buzzes' }, fetchLeaderboard)
+                        .subscribe();
+                    fetchLeaderboard(); // Fetch initial state
+                };
+                
+                const fetchLeaderboard = async () => {
+                    const { data, error } = await supabase
+                        .from('buzzes')
+                        .select('name')
+                        .order('created_at', { ascending: true })
+                        .limit(10);
+                        
+                    if (error) {
+                        console.error('Error fetching leaderboard:', error);
+                        return;
+                    }
+                    
+                    leaderboard.innerHTML = ''; // Clear current list
+                    data.forEach((buzz, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
+                        
+                        let medal = '';
+                        if (index === 0) medal = '🥇';
+                        else if (index === 1) medal = '🥈';
+                        else if (index === 2) medal = '🥉';
+
+                        li.innerHTML = `<span class="text-3xl w-12 text-center">${medal || `<strong>${index + 1}</strong>`}</span> <span>${buzz.name}</span>`;
+                        leaderboard.appendChild(li);
+                    });
+                };
+
+                // Reset functionality
+                resetButton.onclick = async () => {
+                    // Use a custom modal/confirm dialog if needed in a real app
+                    if (window.confirm('Are you sure you want to reset all buzzes?')) {
+                        const { error } = await supabase.from('buzzes').delete().gt('id', 0); // Deletes all rows
+                        if (error) {
+                            console.error('Error resetting buzzes:', error);
+                        } else {
+                            leaderboard.innerHTML = '';
+                        }
+                    }
+                };
+                
+                listenForBuzzes();
+            }
+
+            // --- Client View Logic ---
+            function startClientView() {
+                const registerScreen = document.getElementById('register-screen');
+                const buzzerScreen = document.getElementById('buzzer-screen');
+                const nameInput = document.getElementById('name-input');
+                const registerButton = document.getElementById('register-button');
+                const buzzerButton = document.getElementById('buzzer-button');
+                const buzzerStatus = document.getElementById('buzzer-status');
+                const userInfo = document.getElementById('user-info');
+
+                let userName = localStorage.getItem('buzzerUserName');
+                const userId = getOrSetUserId();
+
+                if (userName) {
+                    showBuzzerScreen(userName);
+                }
+
+                registerButton.onclick = () => {
+                    const name = nameInput.value.trim();
+                    if (name) {
+                        localStorage.setItem('buzzerUserName', name);
+                        showBuzzerScreen(name);
+                    }
+                };
+
+                function showBuzzerScreen(name) {
+                    userName = name;
+                    registerScreen.classList.add('hidden');
+                    buzzerScreen.classList.remove('hidden');
+                    userInfo.textContent = `Playing as: ${name}`;
+                    checkIfAlreadyBuzzed();
+                }
+
+                async function checkIfAlreadyBuzzed() {
+                    const { data, error } = await supabase
+                        .from('buzzes')
+                        .select('id')
+                        .eq('user_id', userId)
+                        .single();
+
+                    if (data) {
+                        buzzerButton.disabled = true;
+                        buzzerStatus.textContent = "You've buzzed in!";
+                    }
+                }
+                
+                buzzerButton.onclick = async () => {
+                    buzzerButton.disabled = true;
+                    buzzerStatus.textContent = "Buzzing in...";
+                    
+                    try {
+                        const { error } = await supabase
+                            .from('buzzes')
+                            .insert({ name: userName, user_id: userId });
+
+                        if (error) {
+                            // This likely means the user has already buzzed (due to the unique constraint)
+                            if (error.code === '23505') { // Unique violation
+                                 buzzerStatus.textContent = "You've already buzzed!";
+                            } else {
+                                throw error;
+                            }
+                        } else {
+                            buzzerStatus.textContent = "You're on the board!";
+                        }
+                    } catch (e) {
+                        console.error('Error buzzing in:', e);
+                        buzzerStatus.textContent = 'Error! Try again.';
+                        buzzerButton.disabled = false; // Allow retry on other errors
+                    }
+                };
+
+                function getOrSetUserId() {
+                    let id = localStorage.getItem('buzzerUserId');
+                    if (!id) {
+                        id = crypto.randomUUID();
+                        localStorage.setItem('buzzerUserId', id);
+                    }
+                    return id;
+                }
+            }
+            
+            // Start the application
+            initializeApp();
+        });
     </script>
 </body>
 </html>
