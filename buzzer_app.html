@@ -110,9 +110,8 @@
                 clientView: document.getElementById('client-view'),
             },
 
-            async init() {
+            init() {
                 try {
-                    // This check will now happen after libraries are confirmed to be loaded.
                     const options = {
                         global: { headers: { 'x-application-name': 'buzzer-app' } },
                         realtime: { params: { eventsPerSecond: 10 } },
@@ -361,8 +360,14 @@
             }
         };
 
-        window.addEventListener('load', () => {
-            App.init();
+        // DEFINITIVE FIX: Wait for the DOM to be ready, then poll for the libraries.
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkLibraries = setInterval(() => {
+                if (window.supabase && window.QRCode) {
+                    clearInterval(checkLibraries);
+                    App.init();
+                }
+            }, 10); // Check every 10 milliseconds
         });
     </script>
 </body>
