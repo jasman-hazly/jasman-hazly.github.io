@@ -368,7 +368,11 @@
             }
         };
 
-        App.init();
+        // DEFINITIVE FIX: Wait for the entire window, including all external scripts, to be fully loaded before starting the app.
+        // This is the most robust way to prevent race conditions on live servers.
+        window.addEventListener('load', () => {
+            App.init();
+        });
     </script>
 </body>
 </html>
