@@ -367,8 +367,11 @@
             }
         };
 
-        // This script now runs only after the entire body and all head scripts are loaded.
-        App.init();
+        // DEFINITIVE FIX: Wait for the entire HTML document to be fully parsed and ready before initializing the app.
+        // This is the most robust way to prevent race conditions on live servers.
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
     </script>
 </body>
 </html>
