@@ -150,7 +150,8 @@
                     init() {
                         App.elements.adminSetupView.classList.remove('hidden');
                         const createButton = document.getElementById('create-game-button');
-                        createButton.onclick = this.createGame;
+                        // FIX: Changed to a more direct assignment to avoid 'this' context issues.
+                        createButton.onclick = App.Admin.createGame;
                     },
                     async createGame() {
                         const gameName = document.getElementById('game-name-input').value.trim();
@@ -159,8 +160,9 @@
                             alert("Please enter a valid game name and number of questions."); return;
                         }
                         
-                        document.getElementById('create-game-button').disabled = true;
-                        document.getElementById('create-game-button').textContent = "Creating...";
+                        const createButton = document.getElementById('create-game-button');
+                        createButton.disabled = true;
+                        createButton.textContent = "Creating...";
 
                         const { data, error } = await App.state.supabase
                             .from('sessions')
@@ -169,9 +171,10 @@
                             .single();
                         
                         if (error) {
-                            alert("Error creating game session: " + error.message);
-                            document.getElementById('create-game-button').disabled = false;
-                            document.getElementById('create-game-button').textContent = "Create Game Session";
+                            // FIX: Added more detailed error information to the alert.
+                            alert(`Error creating game session:\n\n${error.message}\n\nPlease ensure you have run the latest SQL script in your Supabase project.`);
+                            createButton.disabled = false;
+                            createButton.textContent = "Create Game Session";
                             return;
                         }
 
