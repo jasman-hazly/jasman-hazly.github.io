@@ -94,8 +94,8 @@
         let supabase;
 
         // --- Main Application Entry Point ---
-        // We will wait for the DOM to be ready before doing anything.
-        document.addEventListener('DOMContentLoaded', () => {
+        // CORRECTED: We will wait for the entire window (including all scripts) to be fully loaded.
+        window.addEventListener('load', () => {
             // Check if the Supabase library has loaded. If not, we can't proceed.
             if (typeof window.supabase === 'undefined') {
                 console.error("Supabase library not loaded. Cannot start the app.");
