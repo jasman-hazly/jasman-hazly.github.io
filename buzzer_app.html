@@ -95,8 +95,7 @@
         window.addEventListener('load', () => {
             const SUPABASE_URL = 'https://kwbwnuwemdlefpefhjdt.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
-            let supabase;
-
+            
             const App = {
                 state: {
                     supabase: null,
@@ -118,7 +117,20 @@
                         if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
                            throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                         }
-                        this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        
+                        // DEFINITIVE FIX: Added real-time configuration to the client options.
+                        const options = {
+                            global: {
+                                headers: { 'x-application-name': 'buzzer-app' },
+                            },
+                            realtime: {
+                                params: {
+                                    eventsPerSecond: 10,
+                                },
+                            },
+                        };
+
+                        this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
                         if (!this.state.supabase) throw new Error("Supabase client could not be initialized.");
                         
                         this.router();
@@ -150,7 +162,6 @@
                     init() {
                         App.elements.adminSetupView.classList.remove('hidden');
                         const createButton = document.getElementById('create-game-button');
-                        // FIX: Changed to a more direct assignment to avoid 'this' context issues.
                         createButton.onclick = App.Admin.createGame;
                     },
                     async createGame() {
@@ -171,7 +182,6 @@
                             .single();
                         
                         if (error) {
-                            // FIX: Added more detailed error information to the alert.
                             alert(`Error creating game session:\n\n${error.message}\n\nPlease ensure you have run the latest SQL script in your Supabase project.`);
                             createButton.disabled = false;
                             createButton.textContent = "Create Game Session";
@@ -346,4 +356,3 @@
     </script>
 </body>
 </html>
-
