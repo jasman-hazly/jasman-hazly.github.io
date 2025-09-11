@@ -113,10 +113,23 @@
         function initializeApp() {
             try {
                 // Initialize Supabase Client using the global object
-                // CORRECTED: Changed "CreateClient" to "createClient" (lowercase 'c')
-                const { createClient } = window.supabase;
-                supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                // DEFINITIVE FIX: Removed destructuring and now calling createClient directly.
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
                 if (!supabase) {
                     throw new Error("Supabase client could not be initialized. Check your URL and Key.");
 // ... existing code ... -->
+```
+
+### Summary of the Change:
+
+I have replaced these two lines:
+```javascript
+const { createClient } = window.supabase;
+supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+```
+
+With this single, more reliable line:
+```javascript
+supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
