@@ -45,21 +45,29 @@
     </div>
 
     <!-- Host View: Displays QR Code and Leaderboard -->
-    <div id="host-view" class="hidden w-full h-full p-4 md:p-8 flex flex-col items-center justify-center text-center">
-        <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan for this Round!</h1>
-        <p class="text-lg md:text-xl text-gray-300 mb-6">A new QR code is generated for each question.</p>
-        <div id="qrcode-container" class="mb-8">
-            <div id="qrcode"></div>
-        </div>
+    <div id="host-view" class="hidden w-full h-screen p-4 md:p-8 flex flex-col md:flex-row items-center justify-center md:justify-around text-center overflow-hidden">
         
-        <div class="w-full max-w-2xl">
-            <h2 class="text-3xl md:text-4xl font-bold mb-6">Leaderboard</h2>
-            <ol id="leaderboard" class="space-y-3 text-left"></ol>
+        <!-- Left Column: QR Code & Info -->
+        <div class="w-full md:w-1/2 flex flex-col items-center justify-center mb-8 md:mb-0 md:pr-8">
+            <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan for this Round!</h1>
+            <p class="text-lg md:text-xl text-gray-300 mb-6">A new QR code is generated for each question.</p>
+            <div id="qrcode-container" class="mb-8">
+                <div id="qrcode"></div>
+            </div>
+            <button id="reset-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                Reset for Next Question
+            </button>
         </div>
 
-        <button id="reset-button" class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
-            Reset for Next Question
-        </button>
+        <!-- Right Column: Leaderboard -->
+        <div class="w-full md:w-1/2 h-full flex flex-col items-center justify-center">
+            <div class="w-full max-w-2xl h-full flex flex-col">
+                <h2 class="text-3xl md:text-4xl font-bold mb-6 flex-shrink-0">Leaderboard</h2>
+                <div class="overflow-y-auto flex-grow">
+                    <ol id="leaderboard" class="space-y-3 text-left"></ol>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Client View: Registration and Buzzer Button -->
@@ -289,4 +297,5 @@
     </script>
 </body>
 </html>
+
 
