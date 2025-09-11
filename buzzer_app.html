@@ -9,91 +9,85 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
         .leaderboard-item { animation: slideIn 0.3s ease-out forwards; }
-        #qrcode-container {
-            background: white;
-            padding: 1rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease-in-out;
-        }
-        .config-needed {
-            border: 2px dashed #f59e0b;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #1f2937;
-        }
+        #qrcode-container { background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transition: transform 0.3s ease-in-out; }
+        .config-needed { border: 2px dashed #f59e0b; padding: 1rem; border-radius: 0.5rem; background-color: #1f2937; }
+        .form-input { appearance: none; background-color: #1f2937; border: 1px solid #4b5563; border-radius: 0.5rem; padding: 0.75rem 1rem; color: white; width: 100%; transition: border-color 0.2s; }
+        .form-input:focus { outline: none; border-color: #fbbf24; }
     </style>
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen overflow-hidden">
 
-    <!-- Configuration Missing View -->
-    <div id="config-view" class="hidden text-center max-w-lg p-4">
-         <div class="config-needed">
-            <h1 class="text-3xl font-bold text-amber-400 mb-4">Configuration Needed</h1>
-            <p class="text-gray-300">This app requires Supabase credentials to function. Please open this HTML file in a text editor, find the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables in the script section, and replace the placeholder values with your project's credentials.</p>
-            <a href="https://supabase.com/dashboard" target="_blank" class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go to Supabase Dashboard</a>
-        </div>
-    </div>
-
-    <!-- Host View: Displays QR Code and Leaderboard -->
-    <div id="host-view" class="hidden w-full h-screen p-4 md:p-8 flex flex-col md:flex-row items-center justify-center md:justify-around text-center overflow-hidden">
-        
-        <!-- Left Column: QR Code & Info -->
-        <div class="w-full md:w-1/2 flex flex-col items-center justify-center mb-8 md:mb-0 md:pr-8">
-            <h1 class="text-4xl md:text-6xl font-bold mb-4 text-yellow-400">Scan for this Round!</h1>
-            <p class="text-lg md:text-xl text-gray-300 mb-6">A new QR code is generated for each question.</p>
-            <div id="qrcode-container" class="mb-8">
-                <div id="qrcode"></div>
+    <div id="app-container" class="w-full h-screen">
+        <!-- Configuration Missing View -->
+        <div id="config-view" class="hidden text-center max-w-lg p-4 mx-auto mt-10">
+             <div class="config-needed">
+                <h1 class="text-3xl font-bold text-amber-400 mb-4">Configuration Needed</h1>
+                <p class="text-gray-300">Please open this HTML file, find the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables, and replace the placeholder values with your project's credentials.</p>
+                <a href="https://supabase.com/dashboard" target="_blank" class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go to Supabase Dashboard</a>
             </div>
-            <button id="reset-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
-                Reset for Next Question
-            </button>
+        </div>
+        
+        <!-- Admin Setup View -->
+        <div id="admin-setup-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-md text-center">
+                <h1 class="text-5xl font-bold mb-8 text-yellow-400">Create a New Game</h1>
+                <div class="space-y-6">
+                    <div>
+                        <label for="game-name-input" class="block text-left text-lg font-medium text-gray-300 mb-2">Game Name</label>
+                        <input type="text" id="game-name-input" placeholder="e.g., Friday Trivia Night" class="form-input">
+                    </div>
+                    <div>
+                        <label for="questions-input" class="block text-left text-lg font-medium text-gray-300 mb-2">Number of Questions</label>
+                        <input type="number" id="questions-input" placeholder="e.g., 10" class="form-input">
+                    </div>
+                </div>
+                <button id="create-game-button" class="mt-10 w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50">
+                    Create Game Session
+                </button>
+            </div>
         </div>
 
-        <!-- Right Column: Leaderboard -->
-        <div class="w-full md:w-1/2 h-full flex flex-col items-center justify-center">
-            <div class="w-full max-w-2xl h-full flex flex-col">
-                <h2 class="text-3xl md:text-4xl font-bold mb-6 flex-shrink-0">Leaderboard</h2>
-                <div class="overflow-y-auto flex-grow">
-                    <ol id="leaderboard" class="space-y-3 text-left"></ol>
+        <!-- Host View -->
+        <div id="host-view" class="hidden w-full h-screen p-4 md:p-8 flex flex-col md:flex-row items-center justify-center md:justify-around text-center overflow-hidden">
+            <div class="w-full md:w-1/2 flex flex-col items-center justify-center mb-8 md:mb-0 md:pr-8">
+                <h1 id="game-title-display" class="text-4xl md:text-5xl font-bold mb-2 text-yellow-400">Game Title</h1>
+                <h2 id="question-counter-display" class="text-2xl md:text-3xl font-medium text-gray-300 mb-6">Question 1 / 10</h2>
+                <div id="qrcode-container" class="mb-8">
+                    <div id="qrcode"></div>
+                </div>
+                <button id="reset-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                    Next Question
+                </button>
+            </div>
+            <div class="w-full md:w-1/2 h-full flex flex-col items-center justify-center">
+                <div class="w-full max-w-2xl h-full flex flex-col">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6 flex-shrink-0">Leaderboard</h2>
+                    <div class="overflow-y-auto flex-grow">
+                        <ol id="leaderboard" class="space-y-3 text-left"></ol>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Client View: Registration and Buzzer Button -->
-    <div id="client-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
-        <!-- Waiting Screen (No Round ID) -->
-        <div id="waiting-screen" class="hidden text-center">
-            <h1 class="text-4xl font-bold mb-6">Waiting for Host</h1>
-            <p class="text-lg text-gray-400">Please scan the QR code on the main screen to join a round.</p>
-        </div>
-
-        <!-- Registration Screen -->
-        <div id="register-screen" class="hidden w-full max-w-sm text-center">
-            <h1 class="text-4xl font-bold mb-6">Enter Your Name</h1>
-            <input type="text" id="name-input" placeholder="Your Name" class="w-full px-4 py-3 bg-gray-800 border-2 border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:border-yellow-400 transition mb-4" autocomplete="name">
-            <button id="register-button" class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
-                Join Round
-            </button>
-        </div>
-
-        <!-- Buzzer Screen -->
-        <div id="buzzer-screen" class="hidden w-full h-full flex flex-col items-center justify-center text-center">
-             <div id="user-info" class="absolute top-4 text-lg text-gray-400"></div>
-             <p id="buzzer-status" class="text-2xl font-medium mb-8">&nbsp;</p>
-             <button id="buzzer-button" class="w-64 h-64 md:w-80 md:h-80 bg-red-600 rounded-full shadow-2xl flex items-center justify-center text-white font-black text-6xl transition-transform transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5); border: 10px solid #a01010;">
-                BUZZ!
-            </button>
+        <!-- Client View -->
+        <div id="client-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
+            <div id="waiting-screen" class="hidden text-center">
+                <h1 class="text-4xl font-bold mb-6">Waiting for Host</h1>
+                <p class="text-lg text-gray-400">Please scan the QR code on the main screen to join the game.</p>
+            </div>
+            <div id="register-screen" class="hidden w-full max-w-sm text-center">
+                <h1 class="text-4xl font-bold mb-6">Enter Your Name</h1>
+                <input type="text" id="name-input" placeholder="Your Name" class="w-full px-4 py-3 bg-gray-800 border-2 border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:border-yellow-400 transition mb-4" autocomplete="name">
+                <button id="register-button" class="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">Join Game</button>
+            </div>
+            <div id="buzzer-screen" class="hidden w-full h-full flex flex-col items-center justify-center text-center">
+                 <div id="user-info" class="absolute top-4 text-lg text-gray-400"></div>
+                 <p id="buzzer-status" class="text-2xl font-medium mb-8">&nbsp;</p>
+                 <button id="buzzer-button" class="w-64 h-64 md:w-80 md:h-80 bg-red-600 rounded-full shadow-2xl flex items-center justify-center text-white font-black text-6xl transition-transform transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5); border: 10px solid #a01010;">BUZZ!</button>
+            </div>
         </div>
     </div>
 
@@ -103,212 +97,248 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInRypecCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YndudXdlbWRsZWZwZWZoamR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NTUzMDcsImV4cCI6MjA3MzEzMTMwN30.bW1VKtKAQLoV33Fwdpimf24P4v6HDewT9Bvo8_JxUVc';
             let supabase;
 
-            function initializeApp() {
-                try {
-                    if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
-                       throw new Error("Required libraries (Supabase, QRCode) failed to load.");
-                    }
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    if (!supabase) {
-                        throw new Error("Supabase client could not be initialized.");
-                    }
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const view = urlParams.get('view');
-                    if (view === 'host') {
-                        document.getElementById('host-view').classList.remove('hidden');
-                        startHostView();
-                    } else {
-                        document.getElementById('client-view').classList.remove('hidden');
-                        startClientView();
-                    }
-                } catch (error) {
-                    console.error("Initialization failed:", error);
-                    const configView = document.getElementById('config-view');
-                    document.getElementById('host-view').classList.add('hidden');
-                    document.getElementById('client-view').classList.add('hidden');
-                    configView.classList.remove('hidden');
-                    const errorParagraph = document.querySelector('#config-view p');
-                    errorParagraph.innerHTML = `<strong>Error:</strong> Could not start the app. <br><br> <span class="text-sm text-gray-400">Details: ${error.message}</span>`;
-                }
-            }
-
-            function startHostView() {
-                const leaderboard = document.getElementById('leaderboard');
-                const resetButton = document.getElementById('reset-button');
-                const qrCodeElement = document.getElementById('qrcode');
-                const qrCodeContainer = document.getElementById('qrcode-container');
-                let currentRoundId;
-                let qrCodeInstance = null;
-
-                function generateNewRound() {
-                    currentRoundId = crypto.randomUUID();
-                    const clientUrl = `${window.location.href.split('?')[0]}?round=${currentRoundId}`;
-                    
-                    qrCodeContainer.style.transform = 'scale(0)';
-                    setTimeout(() => {
-                        if (qrCodeInstance) {
-                            qrCodeInstance.clear();
-                            qrCodeInstance.makeCode(clientUrl);
-                        } else {
-                            qrCodeInstance = new QRCode(qrCodeElement, {
-                                text: clientUrl, width: 256, height: 256,
-                                colorDark : "#000000", colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.H
-                            });
-                        }
-                        qrCodeContainer.style.transform = 'scale(1)';
-                    }, 300);
-                    
-                    fetchLeaderboard();
-                }
-
-                const listenForBuzzes = () => {
-                    supabase.channel('buzzes')
-                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `round_id=eq.${currentRoundId}` }, fetchLeaderboard)
-                        .subscribe();
-                };
+            const App = {
+                state: {
+                    supabase: null,
+                    session: null,
+                    currentQuestion: 1,
+                    qrCodeInstance: null,
+                    realtimeChannel: null,
+                },
                 
-                const fetchLeaderboard = async () => {
-                    if (!currentRoundId) return;
-                    const { data, error } = await supabase
-                        .from('buzzes')
-                        .select('name')
-                        .eq('round_id', currentRoundId)
-                        .order('created_at', { ascending: true })
-                        .limit(10);
-                        
-                    if (error) {
-                        console.error('Error fetching leaderboard:', error); return;
-                    }
-                    
-                    leaderboard.innerHTML = '';
-                    data.forEach((buzz, index) => {
-                        const li = document.createElement('li');
-                        li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
-                        let medal = (index === 0) ? '🥇' : (index === 1) ? '🥈' : (index === 2) ? '🥉' : `<strong>${index + 1}</strong>`;
-                        li.innerHTML = `<span class="text-3xl w-12 text-center">${medal}</span> <span>${buzz.name}</span>`;
-                        leaderboard.appendChild(li);
-                    });
-                };
+                elements: {
+                    configView: document.getElementById('config-view'),
+                    adminSetupView: document.getElementById('admin-setup-view'),
+                    hostView: document.getElementById('host-view'),
+                    clientView: document.getElementById('client-view'),
+                },
 
-                resetButton.onclick = async () => {
-                    leaderboard.innerHTML = '';
-                    // We don't need to delete from DB if each round is unique. 
-                    // But it's good practice to clean up old rounds if desired. This is optional.
-                    generateNewRound();
-                };
-                
-                generateNewRound(); // Start the first round on load
-                listenForBuzzes();
-            }
-
-            function startClientView() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const roundId = urlParams.get('round');
-
-                const waitingScreen = document.getElementById('waiting-screen');
-                const registerScreen = document.getElementById('register-screen');
-                const buzzerScreen = document.getElementById('buzzer-screen');
-                const nameInput = document.getElementById('name-input');
-                const registerButton = document.getElementById('register-button');
-                const buzzerButton = document.getElementById('buzzer-button');
-                const buzzerStatus = document.getElementById('buzzer-status');
-                const userInfo = document.getElementById('user-info');
-                
-                if (!roundId) {
-                    waitingScreen.classList.remove('hidden');
-                    return;
-                }
-
-                let userName = localStorage.getItem('buzzerUserName');
-                const userId = getOrSetUserId();
-
-                if (userName) {
-                    showBuzzerScreen(userName);
-                } else {
-                    registerScreen.classList.remove('hidden');
-                }
-
-                registerButton.onclick = () => {
-                    const name = nameInput.value.trim();
-                    if (name) {
-                        localStorage.setItem('buzzerUserName', name);
-                        showBuzzerScreen(name);
-                    }
-                };
-
-                function showBuzzerScreen(name) {
-                    userName = name;
-                    registerScreen.classList.add('hidden');
-                    buzzerScreen.classList.remove('hidden');
-                    userInfo.textContent = `Playing as: ${name}`;
-                    checkIfAlreadyBuzzed();
-                }
-
-                async function checkIfAlreadyBuzzed() {
-                    const { data, error } = await supabase
-                        .from('buzzes')
-                        .select('id')
-                        .eq('user_id', userId)
-                        .eq('round_id', roundId)
-                        .single();
-
-                    if (data) {
-                        buzzerButton.disabled = true;
-                        buzzerStatus.textContent = "You've buzzed in for this round!";
-                    }
-                }
-                
-                buzzerButton.onclick = async () => {
-                    // DEFINITIVE FIX: Re-acquire roundId and user details inside the click handler
-                    // This makes the function self-contained and avoids closure/scoping issues on live servers.
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const roundId = urlParams.get('round');
-                    const userId = getOrSetUserId();
-                    const currentUserName = localStorage.getItem('buzzerUserName');
-
-                    if (!roundId) {
-                        buzzerStatus.textContent = "Error: Round ID missing. Please re-scan QR code.";
-                        return;
-                    }
-                    if (!currentUserName) {
-                        buzzerStatus.textContent = "Error: Name not found. Please re-register.";
-                        return;
-                    }
-
-                    buzzerButton.disabled = true;
-                    buzzerStatus.textContent = "Buzzing in...";
-                    
+                async init() {
                     try {
-                        const { error } = await supabase
-                            .from('buzzes')
-                            .insert({ name: currentUserName, user_id: userId, round_id: roundId });
-
-                        if (error) {
-                            if (error.code === '23505') { // Unique violation
-                                 buzzerStatus.textContent = "You've already buzzed!";
-                            } else { throw error; }
-                        } else {
-                            buzzerStatus.textContent = "You're on the board!";
+                        if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
+                           throw new Error("Required libraries (Supabase, QRCode) failed to load.");
                         }
-                    } catch (e) {
-                        console.error('Error buzzing in:', e);
-                        buzzerStatus.textContent = 'Error! Try again.';
-                        buzzerButton.disabled = false;
+                        this.state.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        if (!this.state.supabase) throw new Error("Supabase client could not be initialized.");
+                        
+                        this.router();
+                    } catch (error) {
+                        this.showError(error.message);
                     }
-                };
+                },
 
-                function getOrSetUserId() {
-                    let id = localStorage.getItem('buzzerUserId');
-                    if (!id) {
-                        id = crypto.randomUUID();
-                        localStorage.setItem('buzzerUserId', id);
+                showError(message) {
+                    console.error("Initialization failed:", message);
+                    Object.values(this.elements).forEach(el => el.classList.add('hidden'));
+                    this.elements.configView.classList.remove('hidden');
+                    const errorParagraph = this.elements.configView.querySelector('p');
+                    errorParagraph.innerHTML = `<strong>Error:</strong> Could not start the app. <br><br> <span class="text-sm text-gray-400">Details: ${message}</span>`;
+                },
+
+                router() {
+                    const params = new URLSearchParams(window.location.search);
+                    const view = params.get('view');
+                    const sessionId = params.get('session');
+                    
+                    if (view === 'admin') this.Admin.init();
+                    else if (view === 'host' && sessionId) this.Host.init(sessionId);
+                    else if (sessionId) this.Client.init(sessionId);
+                    else this.Client.init(null); // No session, show waiting
+                },
+
+                Admin: {
+                    init() {
+                        App.elements.adminSetupView.classList.remove('hidden');
+                        const createButton = document.getElementById('create-game-button');
+                        createButton.onclick = this.createGame;
+                    },
+                    async createGame() {
+                        const gameName = document.getElementById('game-name-input').value.trim();
+                        const totalQuestions = parseInt(document.getElementById('questions-input').value, 10);
+                        if (!gameName || !totalQuestions || totalQuestions <= 0) {
+                            alert("Please enter a valid game name and number of questions."); return;
+                        }
+                        
+                        document.getElementById('create-game-button').disabled = true;
+                        document.getElementById('create-game-button').textContent = "Creating...";
+
+                        const { data, error } = await App.state.supabase
+                            .from('sessions')
+                            .insert({ game_name: gameName, total_questions: totalQuestions })
+                            .select()
+                            .single();
+                        
+                        if (error) {
+                            alert("Error creating game session: " + error.message);
+                            document.getElementById('create-game-button').disabled = false;
+                            document.getElementById('create-game-button').textContent = "Create Game Session";
+                            return;
+                        }
+
+                        window.location.search = `?view=host&session=${data.id}`;
                     }
-                    return id;
+                },
+
+                Host: {
+                    async init(sessionId) {
+                        App.elements.hostView.classList.remove('hidden');
+                        const { data, error } = await App.state.supabase.from('sessions').select().eq('id', sessionId).single();
+                        if (error || !data) { App.showError("Game session not found."); return; }
+                        
+                        App.state.session = data;
+                        App.state.currentQuestion = data.current_question;
+                        this.render();
+                        this.listenForBuzzes();
+
+                        document.getElementById('reset-button').onclick = this.nextQuestion.bind(this);
+                    },
+                    render() {
+                        const { session, currentQuestion } = App.state;
+                        document.getElementById('game-title-display').textContent = session.game_name;
+                        document.getElementById('question-counter-display').textContent = `Question ${currentQuestion} / ${session.total_questions}`;
+                        
+                        if (!App.state.qrCodeInstance) this.generateQRCode();
+                        
+                        this.fetchLeaderboard();
+                    },
+                    generateQRCode() {
+                        const clientUrl = `${window.location.origin}${window.location.pathname}?session=${App.state.session.id}`;
+                        App.state.qrCodeInstance = new QRCode(document.getElementById('qrcode'), {
+                            text: clientUrl, width: 256, height: 256,
+                            colorDark : "#000000", colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                    },
+                    async nextQuestion() {
+                        if (App.state.currentQuestion >= App.state.session.total_questions) {
+                            alert("This is the final question!"); return;
+                        }
+                        App.state.currentQuestion++;
+                        const { error } = await App.state.supabase
+                            .from('sessions')
+                            .update({ current_question: App.state.currentQuestion })
+                            .eq('id', App.state.session.id);
+                        if (error) { console.error("Failed to update question", error); App.state.currentQuestion--; return; }
+                        
+                        this.render();
+                    },
+                    async fetchLeaderboard() {
+                        const { session, currentQuestion } = App.state;
+                        const { data, error } = await App.state.supabase
+                            .from('buzzes')
+                            .select('name')
+                            .eq('session_id', session.id)
+                            .eq('question_number', currentQuestion)
+                            .order('created_at', { ascending: true })
+                            .limit(10);
+                        
+                        if (error) { console.error('Error fetching leaderboard:', error); return; }
+                        
+                        const leaderboard = document.getElementById('leaderboard');
+                        leaderboard.innerHTML = '';
+                        data.forEach((buzz, index) => {
+                            const li = document.createElement('li');
+                            li.className = 'leaderboard-item text-xl md:text-2xl p-3 bg-gray-800 rounded-lg flex items-center';
+                            let medal = (index === 0) ? '🥇' : (index === 1) ? '🥈' : (index === 2) ? '🥉' : `<strong>${index + 1}</strong>`;
+                            li.innerHTML = `<span class="text-3xl w-12 text-center">${medal}</span> <span>${buzz.name}</span>`;
+                            leaderboard.appendChild(li);
+                        });
+                    },
+                    listenForBuzzes() {
+                        if (App.state.realtimeChannel) App.state.supabase.removeChannel(App.state.realtimeChannel);
+                        App.state.realtimeChannel = App.state.supabase.channel(`session-${App.state.session.id}`)
+                            .on('postgres_changes', 
+                                { event: 'INSERT', schema: 'public', table: 'buzzes', filter: `session_id=eq.${App.state.session.id}` }, 
+                                (payload) => {
+                                    if (payload.new.question_number === App.state.currentQuestion) {
+                                        this.fetchLeaderboard();
+                                    }
+                                }
+                            )
+                            .subscribe();
+                    }
+                },
+
+                Client: {
+                    init(sessionId) {
+                        const waitingScreen = document.getElementById('waiting-screen');
+                        if (!sessionId) { waitingScreen.classList.remove('hidden'); return; }
+
+                        const registerScreen = document.getElementById('register-screen');
+                        let userName = localStorage.getItem('buzzerUserName');
+                        if (userName) this.showBuzzerScreen(userName, sessionId);
+                        else registerScreen.classList.remove('hidden');
+
+                        document.getElementById('register-button').onclick = () => {
+                            const name = document.getElementById('name-input').value.trim();
+                            if (name) {
+                                localStorage.setItem('buzzerUserName', name);
+                                this.showBuzzerScreen(name, sessionId);
+                            }
+                        };
+                    },
+                    showBuzzerScreen(name, sessionId) {
+                        document.getElementById('register-screen').classList.add('hidden');
+                        document.getElementById('buzzer-screen').classList.remove('hidden');
+                        document.getElementById('user-info').textContent = `Playing as: ${name}`;
+                        this.checkIfAlreadyBuzzed(sessionId);
+                        document.getElementById('buzzer-button').onclick = this.buzzIn.bind(this, sessionId);
+                    },
+                    getOrSetUserId() {
+                        let id = localStorage.getItem('buzzerUserId');
+                        if (!id) { id = crypto.randomUUID(); localStorage.setItem('buzzerUserId', id); }
+                        return id;
+                    },
+                    async checkIfAlreadyBuzzed(sessionId) {
+                        const { data: sessionData } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
+                        if (!sessionData) return;
+                        
+                        const { data: buzzData } = await App.state.supabase
+                            .from('buzzes')
+                            .select('id')
+                            .eq('user_id', this.getOrSetUserId())
+                            .eq('session_id', sessionId)
+                            .eq('question_number', sessionData.current_question)
+                            .single();
+                        
+                        if (buzzData) {
+                            document.getElementById('buzzer-button').disabled = true;
+                            document.getElementById('buzzer-status').textContent = "You've buzzed for this question!";
+                        }
+                    },
+                    async buzzIn(sessionId) {
+                        const buzzerButton = document.getElementById('buzzer-button');
+                        const buzzerStatus = document.getElementById('buzzer-status');
+                        buzzerButton.disabled = true;
+                        buzzerStatus.textContent = "Buzzing in...";
+
+                        try {
+                            const { data: sessionData, error: sessionError } = await App.state.supabase.from('sessions').select('current_question').eq('id', sessionId).single();
+                            if (sessionError || !sessionData) throw new Error("Could not find active game session.");
+
+                            const userId = this.getOrSetUserId();
+                            const currentUserName = localStorage.getItem('buzzerUserName');
+
+                            const { error: insertError } = await App.state.supabase
+                                .from('buzzes')
+                                .insert({ name: currentUserName, user_id: userId, session_id: sessionId, question_number: sessionData.current_question });
+
+                            if (insertError) {
+                                if (insertError.code === '23505') buzzerStatus.textContent = "You've already buzzed!";
+                                else throw insertError;
+                            } else {
+                                buzzerStatus.textContent = "You're on the board!";
+                            }
+                        } catch (e) {
+                            console.error('Error buzzing in:', e);
+                            buzzerStatus.textContent = 'Error! Try again.';
+                            buzzerButton.disabled = false;
+                        }
+                    }
                 }
-            }
-            
-            initializeApp();
+            };
+
+            App.init();
         });
     </script>
 </body>
