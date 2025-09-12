@@ -90,8 +90,8 @@
     <script>
         // --- IMPORTANT ---
         // Replace these with your own Supabase project's URL and Anon Key
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const SUPABASE_URL = 'https://vpvssqytxxzmldazphcp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwdnNzcXl0eHh6bWxkYXpwaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1ODQ4NzQsImV4cCI6MjA3MzE2MDg3NH0.wzUjd3Zyi1iz49b33FrdCVZln9MWEI0WnTBw919_0M8';
         
         const App = {
             state: {
@@ -110,7 +110,7 @@
 
             init() {
                 try {
-                    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+                    if (SUPABASE_URL === 'https://vpvssqytxxzmldazphcp.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwdnNzcXl0eHh6bWxkYXpwaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1ODQ4NzQsImV4cCI6MjA3MzE2MDg3NH0.wzUjd3Zyi1iz49b33FrdCVZln9MWEI0WnTBw919_0M8') {
                         throw new Error("Supabase credentials are not set. Please edit the HTML file and add your project's URL and Anon Key.");
                     }
                     if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
@@ -381,3 +381,4 @@
     </script>
 </body>
 </html>
+
