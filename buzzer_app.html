@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Buzzer App (Supabase Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Libraries are loaded here, blocking further page rendering until they are ready -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -22,16 +21,14 @@
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen overflow-hidden">
 
     <div id="app-container" class="w-full h-screen">
-        <!-- Configuration Missing View -->
         <div id="config-view" class="hidden text-center max-w-lg p-4 mx-auto mt-10">
              <div class="config-needed">
-                <h1 class="text-3xl font-bold text-amber-400 mb-4">Configuration Needed</h1>
-                <p class="text-gray-300">Please open this HTML file, find the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables, and replace the placeholder values with your project's credentials.</p>
-                <a href="https://supabase.com/dashboard" target="_blank" class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go to Supabase Dashboard</a>
-            </div>
+                 <h1 class="text-3xl font-bold text-amber-400 mb-4">Configuration Needed</h1>
+                 <p class="text-gray-300">Please open this HTML file, find the `SUPABASE_URL` and `SUPABASE_ANON_KEY` variables, and replace the placeholder values with your project's credentials.</p>
+                 <a href="https://supabase.com/dashboard" target="_blank" class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go to Supabase Dashboard</a>
+             </div>
         </div>
         
-        <!-- Admin Setup View -->
         <div id="admin-setup-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
             <div class="w-full max-w-md text-center">
                 <h1 class="text-5xl font-bold mb-8 text-yellow-400">Create a New Game</h1>
@@ -51,7 +48,6 @@
             </div>
         </div>
 
-        <!-- Host View -->
         <div id="host-view" class="hidden w-full h-screen p-4 md:p-8 flex flex-col md:flex-row items-center justify-center md:justify-around text-center overflow-hidden">
             <div class="w-full md:w-1/2 flex flex-col items-center justify-center mb-8 md:mb-0 md:pr-8">
                 <h1 id="game-title-display" class="text-4xl md:text-5xl font-bold mb-2 text-yellow-400">Game Title</h1>
@@ -73,7 +69,6 @@
             </div>
         </div>
 
-        <!-- Client View -->
         <div id="client-view" class="hidden w-full h-full flex flex-col items-center justify-center p-4">
             <div id="waiting-screen" class="hidden text-center">
                 <h1 class="text-4xl font-bold mb-6">Waiting for Host</h1>
@@ -92,11 +87,11 @@
         </div>
     </div>
 
-    <!-- DEFINITIVE FIX: The main script is now at the end of the body. -->
-    <!-- This guarantees all HTML elements exist and all <head> scripts have loaded before this script runs. -->
     <script>
-        const SUPABASE_URL = 'https://vpvssqytxxzmldazphcp.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwdnNzcXl0eHh6bWxkYXpwaGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1ODQ4NzQsImV4cCI6MjA3MzE2MDg3NH0.wzUjd3Zyi1iz49b33FrdCVZln9MWEI0WnTBw919_0M8';
+        // --- IMPORTANT ---
+        // Replace these with your own Supabase project's URL and Anon Key
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
         
         const App = {
             state: {
@@ -115,6 +110,9 @@
 
             init() {
                 try {
+                    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+                        throw new Error("Supabase credentials are not set. Please edit the HTML file and add your project's URL and Anon Key.");
+                    }
                     if (typeof window.supabase === 'undefined' || typeof QRCode === 'undefined') {
                        throw new Error("Required libraries (Supabase, QRCode) failed to load. Please check your internet connection and refresh.");
                     }
@@ -207,7 +205,8 @@
                     this.fetchLeaderboard();
                 },
                 generateQRCode() {
-                    const clientUrl = `${window.location.origin}${window.location.pathname}?session=${App.state.session.id}`;
+                    // THIS IS THE CORRECTED LINE
+                    const clientUrl = `${window.location.href.split('?')[0]}?session=${App.state.session.id}`;
                     App.state.qrCodeInstance = new QRCode(document.getElementById('qrcode'), {
                         text: clientUrl, width: 256, height: 256,
                         colorDark : "#000000", colorLight : "#ffffff",
@@ -225,6 +224,8 @@
                         .eq('id', App.state.session.id);
                     if (error) { console.error("Failed to update question", error); App.state.currentQuestion--; return; }
                     
+                    // After successfully updating, clear the old leaderboard and render the new state
+                    document.getElementById('leaderboard').innerHTML = '';
                     this.render();
                 },
                 async fetchLeaderboard() {
@@ -267,13 +268,18 @@
             Client: {
                 state: { realtimeChannel: null },
                 init(sessionId) {
+                    const clientView = document.getElementById('client-view');
                     const waitingScreen = document.getElementById('waiting-screen');
+                    const registerScreen = document.getElementById('register-screen');
+                    
+                    clientView.classList.remove('hidden'); // Show the client container
+
                     if (!sessionId) { 
                         waitingScreen.classList.remove('hidden'); 
                         return; 
                     }
                     
-                    document.getElementById('register-screen').classList.remove('hidden');
+                    registerScreen.classList.remove('hidden');
 
                     const nameInput = document.getElementById('name-input');
                     const storedName = localStorage.getItem('buzzerUserName');
@@ -313,6 +319,7 @@
                                 const buzzerStatus = document.getElementById('buzzer-status');
                                 buzzerButton.disabled = false;
                                 buzzerStatus.innerHTML = '&nbsp;';
+                                // Check again in case they buzzed right before the change
                                 this.checkIfAlreadyBuzzed(sessionId);
                             }
                         )
@@ -367,8 +374,10 @@
             }
         };
 
-        App.init();
+        // Wait for the DOM to be fully loaded before initializing the app
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
     </script>
 </body>
 </html>
-
